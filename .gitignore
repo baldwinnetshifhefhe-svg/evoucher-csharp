@@ -1,4 +1,6 @@
 bin/
 obj/
 evoucher.db
+evoucher.db-shm
+evoucher.db-wal
 *.user
