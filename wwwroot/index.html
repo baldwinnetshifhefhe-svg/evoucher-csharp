@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>e-PSS — e-Producer Support System | Department of Agriculture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#1b5e20;--green2:#2e7d32;--gold:#c79a00;--bg:#f4f6f4;--ink:#1f2a1f;--muted:#5e6b5e;--line:#dfe5df;--card:#fff;--side:#fff;--top:#1b5e20;--topink:#fff;--accent:#2e7d32}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;background-color:var(--bg);background-image:var(--bgimg,none);background-attachment:fixed;color:var(--ink)}
+  a{color:inherit;text-decoration:none}
+  .hidden{display:none!important}
+  .topbar{background:var(--top);color:var(--topink);display:flex;align-items:center;gap:12px;padding:10px 18px;position:sticky;top:0;z-index:50}
+  .crest{width:38px;height:38px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .crest svg{width:100%;height:100%}
+  .topbar h1{font-size:15px;margin:0;font-weight:600;line-height:1.2}
+  .topbar small{display:block;font-weight:400;opacity:.85;font-size:11px}
+  .topbar .spacer{flex:1}
+  .topbar .user{font-size:13px;text-align:right}
+  .topbar .badge{background:rgba(255,255,255,.16);padding:3px 9px;border-radius:20px;font-size:12px;color:var(--topink)}
+  .theme-sel{background:rgba(255,255,255,.16);color:var(--topink);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 10px;font-size:12px;font-family:inherit;cursor:pointer}
+  .theme-sel option{color:#222}
+  #shell:not(.hidden){height:100vh;display:flex;flex-direction:column}
+  .app{display:flex;flex:1;min-height:0}
+  .navtoggle{cursor:pointer;font-size:18px;padding:1px 9px;border-radius:6px;line-height:1}
+  .navtoggle:hover{background:rgba(255,255,255,.15)}
+  .side .lbl{white-space:nowrap}
+  .side .grp.others-h{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;padding-right:14px}
+  body.side-collapsed .side{width:58px}
+  body.side-collapsed .side .lbl{display:none}
+  body.side-collapsed .side .grp{display:none}
+  body.side-collapsed .side .others{display:block!important}
+  body.side-collapsed .side a{justify-content:center;gap:0;padding:9px 0}
+  .side{width:235px;background:var(--side);border-right:1px solid var(--line);padding:10px 0;flex-shrink:0;overflow:auto}
+  .side .grp{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:12px 18px 4px}
+  .side a{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13.5px;color:var(--ink);cursor:pointer;border-left:3px solid transparent}
+  .side a:hover{background:rgba(0,0,0,.04)}
+  .side a.active{background:rgba(46,125,50,.10);border-left-color:var(--accent);color:var(--accent);font-weight:600}
+  .side .ico{width:18px;text-align:center}
+  .main{flex:1;min-height:0;padding:22px 26px;overflow:auto}
+  .crumbs{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .page-h{font-size:22px;margin:0 0 2px;font-weight:700;position:sticky;top:0;background:var(--bg);z-index:5;padding:6px 0 4px}
+  .page-sub{color:var(--muted);margin:0 0 18px;font-size:13px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card .k{font-size:12px;color:var(--muted)}
+  .card .v{font-size:25px;font-weight:700;margin-top:4px}
+  .card .v small{font-size:13px;font-weight:500;color:var(--accent)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:20px}
+  .panel h3{margin:0 0 14px;font-size:15px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  tr:hover td{background:rgba(0,0,0,.02)}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
+  .pill.ok{background:#e6f4ea;color:#2e7d32}.pill.wait{background:#fdf3e0;color:#b9770a}.pill.no{background:#fdeceb;color:#c0392b}.pill.info{background:#e7f0fb;color:#1565c0}
+  .btn{display:inline-block;background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:13px;cursor:pointer;font-weight:600;margin-right:6px}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .btn.gold{background:var(--gold);color:#3a2e00}
+  .btn.sm{padding:4px 9px;font-size:12px;margin:0}
+  .btn.danger{background:transparent;color:#c0392b;border:1px solid #e3b4af}
+  .row{display:flex;gap:18px;flex-wrap:wrap}.row>*{flex:1;min-width:280px}
+  .bar{height:10px;border-radius:6px;background:rgba(0,0,0,.06);overflow:hidden;margin-top:6px}
+  .bar>span{display:block;height:100%;background:var(--accent)}
+  .legend{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;margin-top:8px}
+  .note{font-size:12px;color:var(--muted);background:rgba(0,0,0,.03);border:1px dashed var(--line);border-radius:8px;padding:10px 12px}
+  .field{margin-bottom:14px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .field input,.field select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:14px;font-family:inherit;background:var(--card);color:var(--ink)}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .search{flex:1;min-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)}
+  .watermark{position:fixed;bottom:10px;right:14px;font-size:11px;color:#9aa39a;background:rgba(255,255,255,.75);padding:4px 10px;border-radius:20px;z-index:60}
+  .avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:8px;vertical-align:middle}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green),var(--green2))}
+  .login-card{background:#fff;border-radius:14px;padding:28px;width:460px;max-width:92vw;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+  .login-card .crest{width:54px;height:54px;font-size:20px;margin:0 auto 12px}
+  .login-card h2{text-align:center;margin:0 0 2px;font-size:19px;color:#1f2a1f}
+  .login-card p.s{text-align:center;color:#5e6b5e;font-size:13px;margin:0 0 18px}
+  .roles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+  .role{border:1px solid #dfe5df;border-radius:10px;padding:13px;cursor:pointer;text-align:center;transition:.15s;color:#1f2a1f}
+  .role:hover{border-color:var(--green);background:#f3f8f3;transform:translateY(-2px)}
+  .role .ri{font-size:20px}.role .rt{font-weight:600;font-size:13px;margin-top:5px}.role .rd{font-size:11px;color:#5e6b5e;margin-top:2px}
+  .login-theme{display:flex;gap:6px;justify-content:center;margin-top:16px}
+  .swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc}
+  .phone{width:330px;margin:0 auto;border:10px solid #222;border-radius:34px;background:#fff;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.2)}
+  .phone .pscreen{height:600px;overflow:auto}
+  .phone .pbar{background:var(--green);color:#fff;padding:12px 16px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .phone .pbody{padding:16px;color:#1f2a1f}
+  .otp{display:flex;gap:8px;justify-content:center;margin:14px 0}
+  .otp input{width:42px;height:50px;text-align:center;font-size:20px;border:1px solid #dfe5df;border-radius:8px}
+  .voucher{background:linear-gradient(135deg,var(--green2),var(--green));color:#fff;border-radius:12px;padding:16px;margin-bottom:14px}
+  .voucher .vn{font-size:12px;opacity:.85}.voucher .vv{font-size:20px;font-weight:700;letter-spacing:1px}
+  .tabbar{display:flex;border-top:1px solid #dfe5df}.tabbar div{flex:1;text-align:center;padding:10px;font-size:11px;color:#5e6b5e}.tabbar div.on{color:var(--green);font-weight:700}
+  /* modal + toast */
+  .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100}
+  .mcard{background:var(--card);color:var(--ink);border-radius:12px;padding:22px;width:440px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .mcard h3{margin:0 0 14px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:11px 18px;border-radius:24px;font-size:13px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;transition:.3s}
+  .toast.show{opacity:1;bottom:34px}
+  /* landing */
+  .lnav{display:flex;align-items:center;gap:12px;padding:14px 32px;background:var(--top);color:#fff;position:sticky;top:0;z-index:30}
+  .lnav .spacer{flex:1}
+  .lnav a{font-size:13px;opacity:.9;cursor:pointer;padding:6px 4px}
+  .lnav a:hover{opacity:1}
+  .lhero{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;padding:64px 32px 72px;text-align:center}
+  .lhero h1{font-size:38px;margin:0 0 12px;max-width:820px;margin-inline:auto;line-height:1.15}
+  .lhero p{font-size:17px;opacity:.92;max-width:660px;margin:0 auto 26px}
+  .lhero .btn{font-size:15px;padding:13px 26px}
+  .lhero .ghost{background:transparent;border:1px solid rgba(255,255,255,.6);color:#fff}
+  .lband{display:flex;justify-content:center;gap:48px;flex-wrap:wrap;background:rgba(0,0,0,.12);padding:18px;color:#fff;font-size:14px}
+  .lband b{font-size:22px;display:block}
+  .lsection{max-width:1040px;margin:0 auto;padding:48px 24px}
+  .lsection h2{text-align:center;font-size:25px;margin:0 0 6px}
+  .lsection .lsub{text-align:center;color:var(--muted);margin:0 0 30px}
+  .lgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+  .lmod{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px}
+  .lmod .li{font-size:28px}.lmod h4{margin:10px 0 6px;font-size:16px}.lmod p{margin:0;font-size:13px;color:var(--muted)}
+  .lmod.cur{border:2px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.06)}
+  .ltag{display:inline-block;background:var(--accent);color:#fff;font-size:11px;padding:2px 9px;border-radius:20px;margin-top:10px}
+  .lsteps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px}
+  .lstep{text-align:center;padding:10px}
+  .lstep .num{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 auto 10px;font-size:18px}
+  .lfoot{background:#10150f;color:#cdd6cd;padding:30px 32px;font-size:13px;text-align:center}
+  .factgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:14px 0}
+  .fact{background:rgba(0,0,0,.03);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .fact .fk{font-size:11px;color:var(--muted)}.fact .fv{font-weight:600;margin-top:2px}
+  .tl{list-style:none;padding:0;margin:0}
+  .tl li{padding:0 0 14px 22px;border-left:2px solid var(--line);position:relative;margin-left:6px}
+  .tl li:before{content:"";position:absolute;left:-7px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--accent)}
+  .tl .tt{font-size:12px;color:var(--muted)}
+  .appfoot{padding:14px 26px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;background:var(--side)}
+  /* ===== design uplift (world-class polish) ===== */
+  body{font-family:'Inter','Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .topbar{box-shadow:0 2px 12px rgba(0,0,0,.14)}
+  .card{border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:transform .12s ease,box-shadow .12s ease}
+  .card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.10)}
+  .card .k{text-transform:uppercase;letter-spacing:.5px;font-weight:600;font-size:11px}
+  .card .v{font-size:29px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px;margin-top:6px}
+  .panel{border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .panel h3{font-weight:700;letter-spacing:-.2px}
+  .page-h{letter-spacing:-.4px;font-weight:800}
+  .btn{box-shadow:0 1px 2px rgba(0,0,0,.14);transition:filter .12s ease,transform .05s ease}
+  .btn:active{transform:translateY(1px)}
+  .side{padding-top:14px}
+  .side .grp{font-weight:700}
+  .side a{border-radius:0 24px 24px 0;margin-right:12px;transition:background .12s ease}
+  th{font-size:11px;letter-spacing:.6px}
+  tr{transition:background .1s ease}
+  .pill{box-shadow:0 1px 1px rgba(0,0,0,.04)}
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-thumb{background:rgba(130,140,130,.45);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(130,140,130,.7);background-clip:content-box}
+  ::-webkit-scrollbar-track{background:transparent}
+  /* ===== 3D sidebar ===== */
+  .side{background-image:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.06));box-shadow:inset -9px 0 16px -12px rgba(0,0,0,.5), 3px 0 8px rgba(0,0,0,.14);border-right:none}
+  .side a{margin:4px 12px 4px 0;border-radius:0 22px 22px 0;border-left:none;position:relative;transition:transform .08s ease,box-shadow .12s ease,background .12s ease}
+  .side a:hover{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(0,0,0,.06));box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 2px 4px rgba(0,0,0,.16);transform:translateX(2px)}
+  .side a.active{background:linear-gradient(180deg,var(--green2),var(--green));color:#fff;font-weight:700;box-shadow:0 3px 8px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.30), inset 0 -2px 4px rgba(0,0,0,.18);transform:translateX(2px)}
+  .side a.active .ico{filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
+  .side .grp{text-shadow:0 1px 0 rgba(255,255,255,.06)}
+</style>
+</head>
+<body>
+
+<!-- ============ LANDING / HOME ============ -->
+<div id="landing">
+  <div class="lnav">
+    <div class="crest"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1b5e20"/><circle cx="13" cy="13" r="3.4" fill="#ffd24d"/><path d="M28 13 q5 2 5 9 q-6 0 -5 -9 z" fill="#7cc47f"/><g stroke="#ffd24d" stroke-width="2" fill="none" stroke-linecap="round"><line x1="20" y1="32" x2="20" y2="17"/><path d="M20 20 l-5 -3 M20 24 l-5 -3 M20 28 l-5 -3 M20 20 l5 -3 M20 24 l5 -3 M20 28 l5 -3"/></g></svg></div>
+    <strong>e-PSS — e-Producer Support System</strong>
+    <div class="spacer"></div>
+    <a onclick="document.getElementById('modules').scrollIntoView({behavior:'smooth'})">Modules</a>
+    <a onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How it works</a>
+    <select class="theme-sel" id="themeSel2" onchange="setTheme(this.value)" title="Change theme"></select>
+    <a class="btn" style="margin:0" onclick="showLogin()">Sign in →</a>
+  </div>
+  <div class="lhero">
+    <h1>Cashless agricultural support that reaches the right producers</h1>
+    <p>The e-Voucher Module lets the Department of Agriculture distribute subsidised inputs to producers through secure digital vouchers — issued by SMS, redeemed at agro-dealers with a one-time PIN, and tracked end-to-end.</p>
+    <button class="btn gold" onclick="showLogin()">Sign in to the platform</button>
+    <button class="btn ghost" onclick="enter('producer')">Try the producer app 📱</button>
+  </div>
+  <div class="lband">
+    <div><b>18 642</b> producers supported</div>
+    <div><b>R 71.4m</b> value distributed</div>
+    <div><b>9</b> provinces</div>
+    <div><b>82%</b> redemption rate</div>
+  </div>
+  <div class="lsection" id="modules">
+    <h2>One platform, four modules</h2>
+    <p class="lsub">The e-Voucher Module is the part being delivered under this project.</p>
+    <div class="lgrid">
+      <div class="lmod"><div class="li">📇</div><h4>Extension Directory</h4><p>Contact details of public &amp; private extension and advisory officers.</p></div>
+      <div class="lmod"><div class="li">👨‍🌾</div><h4>Farmer Register</h4><p>The central register of producers and the support they receive.</p></div>
+      <div class="lmod cur"><div class="li">🎟️</div><h4>e-Voucher Module</h4><p>Issue, redeem and track cashless input vouchers across all levels.</p><span class="ltag">This project</span></div>
+      <div class="lmod"><div class="li">📊</div><h4>Decision Support</h4><p>Weather, production, markets and a GIS interface for advice.</p></div>
+    </div>
+  </div>
+  <div class="lsection" id="how" style="padding-top:0">
+    <h2>How the e-Voucher works</h2>
+    <p class="lsub">From selecting a producer to proof of redemption.</p>
+    <div class="lsteps">
+      <div class="lstep"><div class="num">1</div><b>Select &amp; verify</b><p style="font-size:13px;color:var(--muted)">Government screens producers from the Farmer Register and checks RICA.</p></div>
+      <div class="lstep"><div class="num">2</div><b>Issue voucher</b><p style="font-size:13px;color:var(--muted)">A subsidy package is assigned and a unique voucher is sent by SMS.</p></div>
+      <div class="lstep"><div class="num">3</div><b>Redeem with OTP</b><p style="font-size:13px;color:var(--muted)">The producer redeems inputs at an agro-dealer using a one-time PIN.</p></div>
+      <div class="lstep"><div class="num">4</div><b>Pay &amp; report</b><p style="font-size:13px;color:var(--muted)">Dealers invoice, payments clear, and everything is audited &amp; reported.</p></div>
+    </div>
+    <div style="text-align:center;margin-top:28px"><button class="btn" onclick="showLogin()">Sign in to explore the system →</button></div>
+  </div>
+  <div class="lfoot">Department of Agriculture · e-PSS — e-Producer Support System · incorporating the e-Voucher Module<br><span style="opacity:.6">Demonstration system</span></div>
+</div>
+
+<!-- ============ LOGIN ============ -->
+<div id="login" class="login-wrap hidden">
+  <div class="login-card">
+    <div class="crest"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1b5e20"/><circle cx="13" cy="13" r="3.4" fill="#ffd24d"/><path d="M28 13 q5 2 5 9 q-6 0 -5 -9 z" fill="#7cc47f"/><g stroke="#ffd24d" stroke-width="2" fill="none" stroke-linecap="round"><line x1="20" y1="32" x2="20" y2="17"/><path d="M20 20 l-5 -3 M20 24 l-5 -3 M20 28 l-5 -3 M20 20 l5 -3 M20 24 l5 -3 M20 28 l5 -3"/></g></svg></div>
+    <h2>e-PSS</h2>
+    <p class="s">e-Producer Support System · Department of Agriculture</p>
+    <div id="loginErr" style="display:none;background:#fdeceb;color:#c0392b;font-size:12.5px;padding:8px 11px;border-radius:7px;margin-bottom:10px"></div>
+    <div class="field"><label>Username</label><input id="u" placeholder="e.g. admin" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="field"><label>Password</label><input id="pw" type="password" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn" style="width:100%" onclick="doLogin()">Sign in →</button>
+    <div style="font-size:11.5px;color:#5e6b5e;background:#f7faf7;border:1px dashed #dfe5df;border-radius:8px;padding:10px;margin-top:14px;line-height:1.7">
+      <b>Demo accounts (username / password):</b><br>
+      <b>admin</b> / admin123 — National Superuser<br>
+      <b>kzn</b> / kzn123 — Provincial Admin (KwaZulu-Natal)<br>
+      <b>umzinyathi</b> / dist123 — District Officer (uMzinyathi)<br>
+      <b>dealer</b> / dealer123 — Agro-Dealer / Supplier<br>
+      <span style="color:#9aa39a">also: fs/fs123 · vhembe/dist123 · finance/fin123 · auditor/audit123</span>
+    </div>
+    <div class="login-theme" id="loginTheme" style="margin-top:14px"></div>
+    <p style="text-align:center;font-size:11px;color:#9aa39a;margin:8px 0 0">↑ tap a colour to change the theme · or try the Producer app from the home page</p>
+  </div>
+</div>
+
+<!-- ============ WEB APP SHELL ============ -->
+<div id="shell" class="hidden">
+  <div class="topbar">
+    <span class="navtoggle" onclick="toggleSide()" title="Collapse / expand menu">☰</span>
+    <div class="crest"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1b5e20"/><circle cx="13" cy="13" r="3.4" fill="#ffd24d"/><path d="M28 13 q5 2 5 9 q-6 0 -5 -9 z" fill="#7cc47f"/><g stroke="#ffd24d" stroke-width="2" fill="none" stroke-linecap="round"><line x1="20" y1="32" x2="20" y2="17"/><path d="M20 20 l-5 -3 M20 24 l-5 -3 M20 28 l-5 -3 M20 20 l5 -3 M20 24 l5 -3 M20 28 l5 -3"/></g></svg></div>
+    <h1>e-PSS<small>e-Producer Support System</small></h1>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:14px;border-left:1px solid rgba(255,255,255,.25);padding-left:14px">
+      <img id="govEmblem" src="emblem.png" alt="Department of Agriculture" style="height:42px;width:auto;background:#fff;border-radius:6px;padding:3px" onerror="this.style.display='none';var ph=document.getElementById('emblemPH');if(ph)ph.style.display='flex'" onload="var ph=document.getElementById('emblemPH');if(ph)ph.style.display='none';var dt=document.getElementById('deptText');if(dt)dt.style.display='none'">
+      <span id="emblemPH" style="display:flex;align-items:center" title="Placeholder — replace with the official emblem (add public/emblem.png)"><svg viewBox="0 0 40 46" style="height:38px;width:auto"><path d="M4 5 h32 v21 q0 12 -16 18 q-16 -6 -16 -18 z" fill="#0f5132" stroke="#ffd24d" stroke-width="2"/><circle cx="20" cy="13" r="3" fill="#ffd24d"/><g stroke="#ffd24d" stroke-width="1.6" fill="none" stroke-linecap="round"><line x1="20" y1="34" x2="20" y2="22"/><path d="M20 25 l-4 -2 M20 29 l-4 -2 M20 25 l4 -2 M20 29 l4 -2"/></g></svg></span>
+      <div id="deptText" style="font-size:12px;line-height:1.2">Department of Agriculture<br><small style="opacity:.8">Republic of South Africa</small></div>
+    </div>
+    <div class="spacer"></div>
+    <select class="theme-sel hidden" id="scopeSel" onchange="setScope(this.value)" title="Switch province / district"></select>
+    <select class="theme-sel" id="portalSel" onchange="enter(this.value)" title="Switch module — no need to sign out">
+      <option value="gov">🏛️ National Superuser</option>
+      <option value="gov_prov">🗺️ Provincial Admin</option>
+      <option value="gov_dist">📍 District Officer</option>
+      <option value="dealer">🏪 Agro-Dealer / Supplier</option>
+      <option value="producer">📱 Producer (Mobile App)</option>
+    </select>
+    <select class="theme-sel" id="themeSel" onchange="setTheme(this.value)" title="Change theme"></select>
+    <span class="badge" id="clock" style="font-variant-numeric:tabular-nums;cursor:default" title="Current date & time"></span>
+    <div class="user" id="whoBox" style="font-size:13px;text-align:right;line-height:1.2"></div>
+    <span class="badge" style="cursor:pointer" onclick="logout()" title="Sign out">Sign out</span>
+  </div>
+  <div class="app"><nav class="side" id="nav"></nav><div class="main" id="view"></div></div>
+  <div class="appfoot">Department of Agriculture · e-PSS — e-Producer Support System · <a style="cursor:pointer;color:var(--accent)" onclick="logout()">Sign out</a> · Live database — your data is saved</div>
+</div>
+
+<!-- ============ PHONE APP ============ -->
+<div id="phoneApp" class="hidden" style="padding:30px;background:linear-gradient(135deg,var(--green),var(--green2));min-height:100vh">
+  <div style="text-align:center;color:#fff;margin-bottom:16px"><strong>Producer Mobile App — Preview</strong><br>
+    <small style="opacity:.85">Tap through the redemption flow</small>
+    <div style="margin-top:8px"><span class="badge" style="background:rgba(255,255,255,.2);color:#fff;cursor:pointer;padding:5px 12px;border-radius:20px" onclick="logout()">← Back to portal selection</span></div></div>
+  <div class="phone"><div class="pscreen" id="pscreen"></div></div>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+<div class="watermark">💾 LIVE DATABASE — your data is saved on this PC</div>
+
+<script>
+/* ================= THEMES ================= */
+const THEMES={
+  agri:{name:"Agriculture Green",swatch:"#2e7d32",vars:{'--green':'#1b5e20','--green2':'#2e7d32','--gold':'#c79a00','--bg':'#f4f6f4','--ink':'#1f2a1f','--muted':'#5e6b5e','--line':'#dfe5df','--card':'#fff','--side':'#fff','--top':'#1b5e20','--topink':'#fff','--accent':'#2e7d32'}},
+  navy:{name:"Government Navy",swatch:"#1565c0",vars:{'--green':'#0d3b66','--green2':'#1565c0','--gold':'#f4a300','--bg':'#f1f4f8','--ink':'#1a2330','--muted':'#5b6675','--line':'#dde3ec','--card':'#fff','--side':'#fff','--top':'#0d3b66','--topink':'#fff','--accent':'#1565c0'}},
+  savanna:{name:"Savanna Earth",swatch:"#a9772f",vars:{'--green':'#5c4326','--green2':'#a9772f','--gold':'#d4a017','--bg':'#f7f3ec','--ink':'#2c241a','--muted':'#7a6e5d','--line':'#e6ddcc','--card':'#fffdf8','--side':'#fffdf8','--top':'#5c4326','--topink':'#fff','--accent':'#a9772f'}},
+  dark:{name:"Dark Mode",swatch:"#26a269",vars:{'--green':'#0f2e16','--green2':'#26a269','--gold':'#e3b341','--bg':'#10151a','--ink':'#e6edf3','--muted':'#9aa7b2','--line':'#2a323c','--card':'#1a2128','--side':'#161c22','--top':'#0f2e16','--topink':'#fff','--accent':'#26a269'}},
+  harvest:{name:"Fresh Harvest (imagery)",swatch:"#1f8a6d",vars:{'--green':'#11695a','--green2':'#1f8a6d','--gold':'#e0a500','--bg':'#eef4ec','--ink':'#1d2b27','--muted':'#5a6b63','--line':'#d7e4dc','--card':'#ffffff','--side':'#f7fbf6','--top':'#11695a','--topink':'#fff','--accent':'#1f8a6d'}},
+  sky:{name:"Ocean Professional",swatch:"#0277bd",vars:{'--green':'#01579b','--green2':'#0277bd','--gold':'#ef6c00','--bg':'#eef3f8','--ink':'#15232e','--muted':'#566875','--line':'#d6e1ea','--card':'#ffffff','--side':'#f6fafd','--top':'#01579b','--topink':'#fff','--accent':'#0277bd'}},
+  command:{name:"Command Dark (ADEWS style)",swatch:"#26c281",vars:{'--green':'#0a3d2c','--green2':'#1f8a5b','--gold':'#e3b341','--bg':'#0d1512','--ink':'#e7f0ea','--muted':'#8ba39a','--line':'#233029','--card':'#14201b','--side':'#101a16','--top':'#0b130f','--topink':'#eaf3ee','--accent':'#26c281'}},
+};
+const BGIMG={navy:'url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22220%22%20height%3D%22220%22%20viewBox%3D%220%200%20220%20220%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%234a78a8%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20opacity%3D%220.13%22%3E%0A%3Ccircle%20cx%3D%2262%22%20cy%3D%22120%22%20r%3D%2220%22%2F%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%22120%22%20r%3D%228%22%2F%3E%0A%3Ccircle%20cx%3D%22118%22%20cy%3D%22128%22%20r%3D%2211%22%2F%3E%3Ccircle%20cx%3D%22118%22%20cy%3D%22128%22%20r%3D%224%22%2F%3E%0A%3Cpath%20d%3D%22M42%20120%20L42%2096%20L92%2096%20L100%20110%20L134%20110%20L134%20128%22%2F%3E%0A%3Crect%20x%3D%2260%22%20y%3D%2272%22%20width%3D%2226%22%20height%3D%2224%22%2F%3E%3Cpath%20d%3D%22M86%2072%20l10%200%22%2F%3E%0A%3Cpath%20d%3D%22M150%20150%20q-40%20-12%20-120%200%20M150%20164%20q-40%20-12%20-120%200%20M150%20178%20q-40%20-12%20-120%200%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")',savanna:'url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22220%22%20height%3D%22220%22%20viewBox%3D%220%200%20220%20220%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23a9772f%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20opacity%3D%220.15%22%3E%0A%3Crect%20x%3D%22120%22%20y%3D%22120%22%20width%3D%2246%22%20height%3D%2256%22%20rx%3D%224%22%2F%3E%3Cpath%20d%3D%22M120%20138%20l46%200%22%2F%3E%3Ccircle%20cx%3D%22143%22%20cy%3D%22158%22%20r%3D%229%22%2F%3E%0A%3Cellipse%20cx%3D%2250%22%20cy%3D%2260%22%20rx%3D%225%22%20ry%3D%229%22%20transform%3D%22rotate(25%2050%2060)%22%2F%3E%0A%3Cellipse%20cx%3D%2276%22%20cy%3D%2280%22%20rx%3D%225%22%20ry%3D%229%22%20transform%3D%22rotate(-20%2076%2080)%22%2F%3E%0A%3Cellipse%20cx%3D%2240%22%20cy%3D%22100%22%20rx%3D%225%22%20ry%3D%229%22%20transform%3D%22rotate(40%2040%20100)%22%2F%3E%0A%3Cellipse%20cx%3D%2296%22%20cy%3D%2250%22%20rx%3D%225%22%20ry%3D%229%22%20transform%3D%22rotate(-35%2096%2050)%22%2F%3E%0A%3Cellipse%20cx%3D%2270%22%20cy%3D%22120%22%20rx%3D%225%22%20ry%3D%229%22%20transform%3D%22rotate(15%2070%20120)%22%2F%3E%0A%3Cellipse%20cx%3D%2230%22%20cy%3D%22150%22%20rx%3D%225%22%20ry%3D%229%22%20transform%3D%22rotate(-10%2030%20150)%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")',harvest:'url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22220%22%20height%3D%22220%22%20viewBox%3D%220%200%20220%20220%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%235a9e6b%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20opacity%3D%220.16%22%3E%0A%3Ccircle%20cx%3D%2260%22%20cy%3D%2270%22%20r%3D%2216%22%2F%3E%3Cpath%20d%3D%22M60%2054%20q4%20-10%2014%20-10%20M60%2054%20l0%20-8%22%2F%3E%0A%3Ccircle%20cx%3D%22120%22%20cy%3D%22120%22%20r%3D%2218%22%2F%3E%3Ccircle%20cx%3D%22120%22%20cy%3D%22120%22%20r%3D%222%22%2F%3E%0A%3Cpath%20d%3D%22M150%2060%20q14%20-4%2014%2018%20q-16%200%20-14%20-18%20z%22%2F%3E%0A%3Cpath%20d%3D%22M60%20150%20q12%20-2%2012%2016%20q-14%200%20-12%20-16%20z%22%2F%3E%0A%3Ccircle%20cx%3D%22150%22%20cy%3D%22160%22%20r%3D%226%22%2F%3E%3Ccircle%20cx%3D%22162%22%20cy%3D%22168%22%20r%3D%226%22%2F%3E%3Ccircle%20cx%3D%22156%22%20cy%3D%22178%22%20r%3D%226%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")',sky:'url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22220%22%20height%3D%22220%22%20viewBox%3D%220%200%20220%20220%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%234a90b8%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20opacity%3D%220.14%22%3E%0A%3Ccircle%20cx%3D%2280%22%20cy%3D%2260%22%20r%3D%228%22%2F%3E%0A%3Cpath%20d%3D%22M80%2068%20L80%20100%20M80%2078%20L102%2070%20M80%2078%20L60%2092%20M80%20100%20L68%20130%20M80%20100%20L94%20128%22%2F%3E%0A%3Ccircle%20cx%3D%22110%22%20cy%3D%2266%22%20r%3D%221.8%22%2F%3E%3Ccircle%20cx%3D%22118%22%20cy%3D%2274%22%20r%3D%221.8%22%2F%3E%3Ccircle%20cx%3D%22114%22%20cy%3D%2284%22%20r%3D%221.8%22%2F%3E%3Ccircle%20cx%3D%22124%22%20cy%3D%2264%22%20r%3D%221.8%22%2F%3E%3Ccircle%20cx%3D%22108%22%20cy%3D%2292%22%20r%3D%221.8%22%2F%3E%0A%3Cpath%20d%3D%22M40%20150%20q40%20-10%20140%200%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")'};
+function setTheme(k){const t=THEMES[k]||THEMES.agri;Object.entries(t.vars).forEach(([a,b])=>document.documentElement.style.setProperty(a,b));document.documentElement.style.setProperty('--bgimg', BGIMG[k]||'none');try{localStorage.setItem('evTheme',k)}catch(e){}['themeSel','themeSel2'].forEach(id=>{const s=$(id);if(s)s.value=k;});}
+function buildThemeUI(){const opts=Object.entries(THEMES).map(([k,t])=>`<option value="${k}">🎨 ${t.name}</option>`).join("");['themeSel','themeSel2'].forEach(id=>{if($(id))$(id).innerHTML=opts;});$('loginTheme').innerHTML=Object.entries(THEMES).map(([k,t])=>`<span class="swatch" style="background:${t.swatch}" title="${t.name}" onclick="setTheme('${k}')"></span>`).join("");}
+
+/* ================= STATE / DATA ================= */
+const PROV={FS:"Free State",KZN:"KwaZulu-Natal",WC:"Western Cape",GP:"Gauteng",MP:"Mpumalanga",NW:"North West",LP:"Limpopo",NC:"Northern Cape",EC:"Eastern Cape"};
+const DIST={EC:["Buffalo City","Nelson Mandela Bay","Alfred Nzo","Amathole","Chris Hani","Joe Gqabi","OR Tambo","Sarah Baartman"],FS:["Mangaung","Fezile Dabi","Lejweleputswa","Thabo Mofutsanyana","Xhariep"],GP:["Tshwane","Johannesburg","Ekurhuleni","Sedibeng","West Rand"],KZN:["eThekwini","Amajuba","Harry Gwala","iLembe","King Cetshwayo","Ugu","uMgungundlovu","uMkhanyakude","uMzinyathi","uThukela","Zululand"],LP:["Capricorn","Mopani","Sekhukhune","Vhembe","Waterberg"],MP:["Ehlanzeni","Gert Sibande","Nkangala"],NW:["Bojanala Platinum","Dr Kenneth Kaunda","Dr Ruth Segomotsi Mompati","Ngaka Modiri Molema"],NC:["Frances Baard","John Taolo Gaetsewe","Namakwa","Pixley ka Seme","ZF Mgcawu"],WC:["Cape Town","Cape Winelands","Central Karoo","Garden Route","Overberg","West Coast"]};
+function distOptions(p,sel){return (DIST[p]||[]).map(d=>`<option ${d===sel?'selected':''}>${d}</option>`).join('');}
+function fillDist(pid,did){const d=document.getElementById(did);const pv=document.getElementById(pid);if(d&&pv)d.innerHTML=distOptions(pv.value);}
+let UID=100, VNO=480;
+const STATE={role:'gov',scope:null,view:'dash',filter:'',
+  producers:[
+    {id:1,name:"Thabo Mokoena",prov:"FS",dist:"Thaba Nchu",ent:"Maize · 4ha",status:"Active",rica:"Verified",demo:"M·41"},
+    {id:2,name:"Nomsa Dlamini",prov:"KZN",dist:"uMzinyathi",ent:"Vegetables · 1.5ha",status:"Active",rica:"Verified",demo:"F·29"},
+    {id:3,name:"Pieter van Wyk",prov:"WC",dist:"Swartland",ent:"Wheat · 12ha",status:"Pending",rica:"Verified",demo:"M·53"},
+    {id:4,name:"Lerato Sithole",prov:"GP",dist:"Tshwane",ent:"Poultry · 800 birds",status:"Active",rica:"Verified",demo:"F·34"},
+    {id:5,name:"Sipho Ndlovu",prov:"MP",dist:"Nkomazi",ent:"Sugarcane · 6ha",status:"Active",rica:"Verified",demo:"M·47"},
+    {id:6,name:"Anna Botha",prov:"NW",dist:"Mahikeng",ent:"Cattle · 40 head",status:"Suspended",rica:"Mismatch",demo:"F·61"},
+    {id:7,name:"Zanele Khumalo",prov:"KZN",dist:"Zululand",ent:"Vegetables · 2ha",status:"Active",rica:"Verified",demo:"F·26"},
+    {id:8,name:"Johannes Maritz",prov:"FS",dist:"Mangaung",ent:"Maize · 9ha",status:"Active",rica:"Verified",demo:"M·58"},
+    {id:9,name:"Dineo Phiri",prov:"LP",dist:"Vhembe",ent:"Tomatoes · 3ha",status:"Active",rica:"Verified",demo:"F·31"},
+    {id:10,name:"Bongani Zulu",prov:"KZN",dist:"King Cetshwayo",ent:"Goats · 60 head",status:"Active",rica:"Verified",demo:"M·44"},
+    {id:11,name:"Maria Adams",prov:"NC",dist:"Frances Baard",ent:"Grapes · 5ha",status:"Pending",rica:"Verified",demo:"F·39"},
+    {id:12,name:"Tshepo Molefe",prov:"NW",dist:"Bojanala",ent:"Sunflower · 15ha",status:"Active",rica:"Verified",demo:"M·36"},
+    {id:13,name:"Fatima Patel",prov:"GP",dist:"Ekurhuleni",ent:"Poultry · 1200 birds",status:"Active",rica:"Verified",demo:"F·48"},
+    {id:14,name:"Andile Mbeki",prov:"EC",dist:"OR Tambo",ent:"Maize · 2.5ha",status:"Active",rica:"Verified",demo:"M·33"},
+    {id:15,name:"Grace Nkosi",prov:"MP",dist:"Ehlanzeni",ent:"Vegetables · 1ha",status:"Active",rica:"Verified",demo:"F·27"},
+  ],
+  vouchers:[
+    {no:"EV-2026-004471",who:"Thabo Mokoena",pkg:"Maize starter pack",val:3200,status:"Redeemed"},
+    {no:"EV-2026-004472",who:"Nomsa Dlamini",pkg:"Vegetable seed + fert.",val:1850,status:"Issued"},
+    {no:"EV-2026-004473",who:"Lerato Sithole",pkg:"Poultry feed pack",val:2400,status:"Issued"},
+    {no:"EV-2026-004474",who:"Pieter van Wyk",pkg:"Wheat fertiliser",val:7600,status:"Pending approval"},
+    {no:"EV-2026-004475",who:"Sipho Ndlovu",pkg:"Cane herbicide pack",val:4100,status:"Redeemed"},
+    {no:"EV-2026-004476",who:"Dineo Phiri",pkg:"Tomato seedling pack",val:2050,status:"Redeemed"},
+    {no:"EV-2026-004477",who:"Tshepo Molefe",pkg:"Sunflower seed + fert.",val:5400,status:"Issued"},
+    {no:"EV-2026-004478",who:"Andile Mbeki",pkg:"Maize starter pack",val:3200,status:"Redeemed"},
+    {no:"EV-2026-004479",who:"Fatima Patel",pkg:"Poultry feed pack",val:2400,status:"Issued"},
+  ],
+  packages:[
+    {name:"Maize starter pack",val:3200,items:"Maize seed 10kg + LAN 50kg",status:"Active"},
+    {name:"Vegetable seed + fertiliser",val:1850,items:"Veg seed kit + fertiliser",status:"Active"},
+    {name:"Poultry feed pack",val:2400,items:"Starter feed 40kg x2",status:"Active"},
+    {name:"Sunflower seed + fertiliser",val:5400,items:"Sunflower seed 5kg + fert.",status:"Active"},
+  ],
+  catalogue:[
+    {n:"Maize seed (10kg)",c:"Seed",p:850,s:"Approved"},{n:"LAN fertiliser (50kg)",c:"Fertiliser",p:620,s:"Approved"},
+    {n:"Vegetable seed kit",c:"Seed",p:430,s:"Approved"},{n:"Poultry starter feed (40kg)",c:"Feed",p:540,s:"Approved"},
+    {n:"Tomato seedlings (tray)",c:"Seedlings",p:180,s:"Approved"},{n:"Sunflower seed (5kg)",c:"Seed",p:720,s:"Approved"},
+    {n:"Knapsack sprayer",c:"Equipment",p:1200,s:"Under review"},{n:"Cattle lick supplement",c:"Feed",p:390,s:"Approved"},
+  ],
+  dealers:[
+    {n:"AgriMart Tshwane",prov:"GP",dist:"Tshwane",c:"D. Naidoo",s:"Active"},{n:"FarmCo Nkomazi",prov:"MP",dist:"Nkomazi",c:"S. Mahlangu",s:"Active"},
+    {n:"KZN Agri Supplies",prov:"KZN",dist:"Zululand",c:"B. Cele",s:"Active"},{n:"Swartland Boere Co-op",prov:"WC",dist:"Swartland",c:"J. du Toit",s:"Active"},
+    {n:"Vhembe Farm Centre",prov:"LP",dist:"Vhembe",c:"R. Netshi",s:"Pending"},{n:"Mangaung Agri Hub",prov:"FS",dist:"Mangaung",c:"T. Modise",s:"Active"},
+  ],
+  users:[
+    {n:"Motshidisi Sitali",r:"National Superuser",lvl:"National",sc:"All provinces",s:"Active"},
+    {n:"Quinton Nyoka",r:"Provincial Admin",lvl:"Provincial",sc:"KwaZulu-Natal",s:"Active"},
+    {n:"Zinhle Mkhize",r:"Provincial Admin",lvl:"Provincial",sc:"Free State",s:"Active"},
+    {n:"James Ngaka",r:"District Officer",lvl:"District",sc:"Vhembe (LP)",s:"Active"},
+    {n:"Mpho Lekganyane",r:"District Officer",lvl:"District",sc:"Tshwane (GP)",s:"Active"},
+    {n:"Tebogo Mothibi",r:"Extension Officer",lvl:"District",sc:"Nkomazi (MP)",s:"Active"},
+    {n:"Ben Coetzer",r:"Finance / Payments",lvl:"National",sc:"Treasury / BAS",s:"Active"},
+    {n:"Sara Williams",r:"Auditor (read-only)",lvl:"National",sc:"All provinces",s:"Active"},
+  ],
+  audit:[
+    {t:"15 May 2026 10:12",a:"Andile Mbeki",e:"Voucher EV-...4478 redeemed at AgriMart Tshwane",k:"OTP verified",c:"ok"},
+    {t:"14 May 2026 09:41",a:"Dineo Phiri",e:"Voucher EV-...4476 redeemed (offline, synced)",k:"OTP verified",c:"ok"},
+    {t:"13 May 2026 15:02",a:"M. Sitali",e:"Subsidy package 'Poultry 2026' approved",k:"Approval",c:"info"},
+    {t:"12 May 2026 08:55",a:"Admin",e:"Anna Botha suspended — RICA name mismatch",k:"Flag",c:"no"},
+  ],
+};
+
+/* ================= HELPERS ================= */
+const $=id=>document.getElementById(id);
+const money=n=>"R "+Number(n).toLocaleString('en-ZA');
+const ini=n=>n.split(" ").map(x=>x[0]).join("").slice(0,2);
+const sCls=s=>({Active:"ok","Approved":"ok",Redeemed:"ok",Verified:"ok",Paid:"ok",Resolved:"ok",Issued:"info",Applied:"wait",Pending:"wait","Pending approval":"wait","Under review":"wait",Suspended:"no",Mismatch:"no",Expired:"no",Rejected:"no"}[s]||"info");
+function fmtDate(iso){if(!iso)return '—';const d=new Date(iso+'T00:00:00');return isNaN(d)?iso:d.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'});}
+function scopedProducers(){if(STATE.scopeKind==='prov')return STATE.producers.filter(p=>p.prov===STATE.scope);if(STATE.scopeKind==='dist')return STATE.producers.filter(p=>p.dist===STATE.scope);return STATE.producers;}
+function scopeLabel(){return STATE.scopeKind==='dist'?STATE.scope+" District":STATE.scopeKind==='prov'?PROV[STATE.scope]:"";}
+function sortProducers(list){const s=STATE.sort||'name';const a=[...list];if(s==='name')a.sort((x,y)=>x.name.localeCompare(y.name));else if(s==='name_desc')a.sort((x,y)=>y.name.localeCompare(x.name));else if(s==='prov')a.sort((x,y)=>(PROV[x.prov]||'').localeCompare(PROV[y.prov]||''));else if(s==='status')a.sort((x,y)=>x.status.localeCompare(y.status));return a;}
+function matchClient(q){return STATE.producers.filter(p=>p.status==='Active'&&(!q.gender||p.demo[0]===q.gender)&&(!q.youth||(+p.demo.split('·')[1]<=35))&&(!q.prov||p.prov===q.prov)&&(!q.dist||p.dist===q.dist));}
+function provOf(name){const p=STATE.producers.find(x=>x.name===name);return p?p.prov:null;}
+function scopedVouchers(){if(!STATE.scopeKind)return STATE.vouchers;const names=new Set(scopedProducers().map(p=>p.name));return STATE.vouchers.filter(v=>names.has(v.who));}
+function flt(arr,fields){const f=STATE.filter.trim().toLowerCase();if(!f)return arr;return arr.filter(o=>fields.some(k=>String(o[k]||"").toLowerCase().includes(f)));}
+function pill(s){return `<span class="pill ${sCls(s)}">${s}</span>`;}
+function card(k,v,extra,col){return `<div class="card"${col?` style="border-top:3px solid ${col}"`:''}><div class="k">${k}</div><div class="v"${col?` style="color:${col}"`:''}>${v} ${extra?`<small>${extra}</small>`:""}</div></div>`}
+function crumb(t){return `<div class="crumbs">Home / ${scopeLabel()?scopeLabel()+" / ":""}${t}</div>`}
+function provFilterSel(){return STATE.scopeKind?'':`<select onchange="STATE.filterProv=this.value;renderView()" style="padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)"><option value="">Filter: All provinces</option>${Object.entries(PROV).map(([k,v])=>`<option value="${k}" ${STATE.filterProv===k?'selected':''}>${v} only</option>`).join('')}</select>`;}
+function barChart(items){const max=Math.max(...items.map(i=>i[1]))||1;return items.map(([l,v])=>`<div style="margin-bottom:11px"><div class="legend"><span>${l}</span><span>${v}</span></div><div class="bar"><span style="width:${Math.round(v/max*100)}%"></span></div></div>`).join("");}
+function searchBar(extra){return `<div class="toolbar"><input class="search" placeholder="🔍 Type to filter…" value="${STATE.filter}" oninput="applyFilter(this.value)">${extra||""}</div>`;}
+function applyFilter(v){STATE.filter=v;renderView();const s=document.querySelector('.search');if(s){s.focus();s.value=v;s.setSelectionRange(v.length,v.length);}}
+
+/* ----- toast / modal ----- */
+let toastT;
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+function modal(title,bodyHtml,okLabel,okFn){
+  $('modalRoot').innerHTML=`<div class="ovl" onclick="if(event.target===this)closeModal()"><div class="mcard"><h3>${title}</h3>${bodyHtml}<div style="margin-top:16px;text-align:right"><button class="btn alt" onclick="closeModal()">Cancel</button><button class="btn" id="modalOk">${okLabel}</button></div></div></div>`;
+  $('modalOk').onclick=okFn;
+}
+function closeModal(){$('modalRoot').innerHTML='';}
+
+/* ----- real file downloads ----- */
+function dl(filename,content,mime){const b=new Blob([content],{type:mime});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);}
+function ascii(s){return String(s).replace(/[–—]/g,'-').replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[^\x20-\x7E]/g,'');}
+function makePdf(title,lines){
+  let stream="BT\n/F1 16 Tf\n50 790 Td\n("+pe(title)+") Tj\n/F1 10 Tf\n0 -10 Td\n";
+  lines.forEach(l=>{stream+="0 -16 Td ("+pe(ascii(l))+") Tj\n";});
+  stream+="ET";
+  const objs={1:"<</Type/Catalog/Pages 2 0 R>>",2:"<</Type/Pages/Kids[3 0 R]/Count 1>>",
+    3:"<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>",
+    4:"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>",5:"<</Length "+stream.length+">>\nstream\n"+stream+"\nendstream"};
+  let pdf="%PDF-1.4\n";const off={};
+  for(let i=1;i<=5;i++){off[i]=pdf.length;pdf+=i+" 0 obj\n"+objs[i]+"\nendobj\n";}
+  const xs=pdf.length;pdf+="xref\n0 6\n0000000000 65535 f \n";
+  for(let i=1;i<=5;i++)pdf+=String(off[i]).padStart(10,'0')+" 00000 n \n";
+  pdf+="trailer\n<</Size 6/Root 1 0 R>>\nstartxref\n"+xs+"\n%%EOF";
+  return pdf;
+}
+function pe(s){return String(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');}
+function exportPdf(title,lines){dl(title.replace(/[^a-z0-9]+/gi,'_')+'.pdf',makePdf(title,['Department of Agriculture — e-PSS (e-Producer Support System)','Generated: '+new Date().toLocaleString('en-ZA'),'',...lines]),'application/pdf');toast('📄 PDF downloaded');}
+function exportCsv(name,headers,rows){const csv=[headers.join(','),...rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(','))].join('\n');dl(name+'.csv',csv,'text/csv');toast('📊 Excel/CSV downloaded');}
+
+/* ================= ACTIONS (make it real) ================= */
+function openAddBeneficiary(){
+  const opts=Object.entries(PROV).map(([k,v])=>`<option value="${k}" ${STATE.scope===k?'selected':''}>${v}</option>`).join("");
+  modal("Add beneficiary",`
+    <div class="field"><label>Full name</label><input id="b_name" placeholder="e.g. Sibusiso Khoza"></div>
+    <div class="row"><div class="field"><label>Province</label><select id="b_prov" onchange="fillDist('b_prov','b_dist')">${opts}</select></div>
+    <div class="field"><label>District</label><select id="b_dist">${distOptions((STATE.scopeKind==='prov'&&STATE.scope)?STATE.scope:Object.keys(PROV)[0])}</select></div></div>
+    <div class="field"><label>Enterprise</label><input id="b_ent" placeholder="e.g. Maize · 3ha"></div>
+    <div class="row"><div class="field"><label>Gender·Age</label><input id="b_demo" placeholder="e.g. M·38"></div>
+    <div class="field"><label>Cellphone</label><input id="b_cell" placeholder="e.g. 082 000 0000"></div></div>
+    <div class="note">RICA status is checked <b>automatically</b> via the RICA integration when you save (ToR 4.14).</div>`,
+    "Add beneficiary",async()=>{
+      const name=$('b_name').value.trim();if(!name){toast('Enter a name');return;}
+      const rica=await api('/integrations/rica?name='+encodeURIComponent(name)+'&cell='+encodeURIComponent($('b_cell').value||''));
+      await api('/producers','POST',{name,prov:$('b_prov').value,dist:$('b_dist').value,ent:$('b_ent').value,rica:rica.verified?'Verified':'Mismatch',demo:$('b_demo').value});
+      closeModal();await reload();
+      toast(rica.verified?('✅ Saved · RICA verified: '+name):('⚠️ Saved · RICA MISMATCH for '+name+' — flagged'));
+    });
+}
+async function removeBeneficiary(id){const p=STATE.producers.find(x=>x.id===id);if(!p)return;if(confirm('Remove beneficiary "'+p.name+'"? This deletes it from the database.')){await api('/producers/'+id,'DELETE');await reload();toast('🗑 Removed: '+p.name);}}
+async function toggleSuspend(id){const p=STATE.producers.find(x=>x.id===id);if(!p)return;const r=await api('/producers/'+id+'/suspend','POST');await reload();toast((r.status==='Suspended'?'⏸ Suspended ':'▶ Reactivated ')+p.name);}
+async function issueVoucher(){
+  const who=$('v_prod').value, pkn=$('v_pkg').value;
+  const r=await api('/vouchers','POST',{who,pkg:pkn});
+  if(r.error){toast(r.error);return;}
+  await reload();toast('🎟️ '+r.no+' issued — SMS sent (OTP '+r.otp+')');
+}
+function openAddPackage(){
+  modal("Create subsidy package",`
+    <div class="field"><label>Package name</label><input id="p_name" placeholder="e.g. Goat starter pack"></div>
+    <div class="field"><label>Included inputs</label><input id="p_items" placeholder="e.g. 4 goats + feed"></div>
+    <div class="field"><label>Value (R)</label><input id="p_val" type="number" placeholder="e.g. 3500"></div>`,
+    "Create package",async()=>{const n=$('p_name').value.trim();if(!n){toast('Enter a name');return;}
+      await api('/packages','POST',{name:n,val:$('p_val').value,items:$('p_items').value});closeModal();await reload();toast('📦 Package created: '+n);});
+}
+async function removePackage(name){const pk=STATE.packages.find(p=>p.name===name);if(pk&&confirm('Remove package "'+name+'"?')){await api('/packages/'+pk.id,'DELETE');await reload();toast('🗑 Package removed');}}
+function openAddInput(){
+  modal("Add catalogue input",`
+    <div class="field"><label>Input name</label><input id="i_n" placeholder="e.g. Drip irrigation kit"></div>
+    <div class="row"><div class="field"><label>Category</label><select id="i_c"><option>Seed</option><option>Fertiliser</option><option>Feed</option><option>Seedlings</option><option>Equipment</option></select></div>
+    <div class="field"><label>Unit price (R)</label><input id="i_p" type="number" placeholder="e.g. 950"></div></div>`,
+    "Add input",async()=>{const n=$('i_n').value.trim();if(!n){toast('Enter a name');return;}
+      await api('/catalogue','POST',{n,c:$('i_c').value,p:$('i_p').value});closeModal();await reload();toast('📦 Input added: '+n);});
+}
+async function removeInput(n){const it=STATE.catalogue.find(i=>i.n===n);if(it&&confirm('Remove input "'+n+'"?')){await api('/catalogue/'+it.id,'DELETE');await reload();toast('🗑 Input removed');}}
+function openAddUser(){
+  const opts=Object.values(PROV).map(p=>`<option>${p}</option>`).join("");
+  modal("Add system user",`
+    <div class="field"><label>Full name</label><input id="u_n" placeholder="Full name"></div>
+    <div class="row"><div class="field"><label>Role</label><select id="u_r"><option>National Superuser</option><option>Provincial Admin</option><option>District Officer</option><option>Extension Officer</option><option>Auditor (read-only)</option></select></div>
+    <div class="field"><label>Scope</label><select id="u_s"><option>All provinces</option>${opts}</select></div></div>`,
+    "Add user",async()=>{const n=$('u_n').value.trim();if(!n){toast('Enter a name');return;}
+      await api('/users','POST',{name:n,role:LABEL2TOKEN[$('u_r').value]||'district',scope:$('u_s').value});closeModal();await reload();toast('👤 User added: '+n);});
+}
+async function removeUser(n){const u=STATE.users.find(x=>x.n===n);if(u&&confirm('Remove user "'+n+'"?')){await api('/users/'+u.id,'DELETE');await reload();toast('🗑 User removed');}}
+
+/* ================= NAV ================= */
+const NAV={
+  gov:{label:"National Superuser",sub:"National",items:[["dash","📊","Dashboard"],["mande","📈","Monitoring & Evaluation"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries / Register"],["packages","🧩","Subsidy Packages"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["payments","💳","Payments"],["comms","✉️","Communications"],["cat","📦","Input Catalogue"],["suppliers","🏪","Suppliers Directory"],["users","👥","Users & Access"],["controls","🛡️","Anti-Corruption Controls"],["reports","📑","Reports & Export"],["audit","🔒","Audit Trail"],["griev","📣","Grievances"],["coverage","🧭","Requirements Coverage"],["links","🔗","System Links"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["about","ℹ️","About this demo"]]},
+  gov_prov:{label:"Provincial Admin",sub:"KwaZulu-Natal",items:[["dash","📊","Dashboard"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["payments","💳","Payments"],["comms","✉️","Communications"],["mande","📈","Monitoring & Evaluation"],["controls","🛡️","Anti-Corruption Controls"],["reports","📑","Reports & Export"],["audit","🔒","Audit Trail"],["griev","📣","Grievances"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["about","ℹ️","About this demo"]]},
+  gov_dist:{label:"District Officer",sub:"uMzinyathi District (KZN)",items:[["dash","📊","Dashboard"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["payments","💳","Payments"],["comms","✉️","Communications"],["mande","📈","Monitoring & Evaluation"],["controls","🛡️","Anti-Corruption Controls"],["griev","📣","Grievances"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["about","ℹ️","About this demo"]]},
+  dealer:{label:"Agro-Dealer / Supplier",sub:"AgriMart Tshwane",items:[["ddash","📊","Dashboard"],["redemptions","✅","Redeem Vouchers"],["payments","💳","My Payments"],["inv","🧾","Invoices"],["dcat","📦","Approved Inputs"]]},
+  fin:{label:"Financial Institution",sub:"Clearing Officer",items:[["fdash","📊","Dashboard"],["clearing","🏦","Deposit Clearing"],["fpay","💳","Payments"]]},
+};
+
+/* ================= VIEWS ================= */
+const VIEWS={
+  dash:()=>{const P=scopedProducers(),V=scopedVouchers();const val=V.reduce((s,v)=>s+v.val,0);const red=V.filter(v=>v.status==='Redeemed').length;
+    const provCounts=Object.keys(PROV).map(k=>[PROV[k],STATE.producers.filter(p=>p.prov===k).length]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+    return `${crumb("Dashboard")}<h2 class="page-h">${scopeLabel()?scopeLabel()+" Dashboard":"National Dashboard"}</h2>
+    <p class="page-sub">${scopeLabel()?"Producer support in "+scopeLabel():"Producer support across all nine provinces"} · 2026 season · <b>live database</b></p>
+    <div class="cards">${card("Producers supported",P.length,"","#4aa3ff")}${card("Vouchers issued",V.length,"","#e3b341")}${card("Vouchers redeemed",red,V.length?Math.round(red/V.length*100)+"%":"","#26c281")}${card("Value distributed",money(val),"","#ff8a4a")}</div>
+    <div class="row"><div class="panel"><h3>${STATE.scope?"Producers by status":"Producers by province"}</h3>${barChart(STATE.scope?[["Active",P.filter(p=>p.status==='Active').length],["Pending",P.filter(p=>p.status==='Pending').length],["Suspended",P.filter(p=>p.status==='Suspended').length]]:provCounts)}</div>
+      <div class="panel"><h3>Vouchers by status</h3>${barChart([["Redeemed",V.filter(v=>v.status==='Redeemed').length],["Issued",V.filter(v=>v.status==='Issued').length],["Pending",V.filter(v=>v.status.startsWith('Pending')).length]])}</div></div>
+    <div class="panel"><h3>Recent vouchers</h3>${voucherTable(V.slice(0,6))}</div>`;},
+
+  mande:()=>{let P=scopedProducers(); if(STATE.filterProv) P=P.filter(p=>p.prov===STATE.filterProv); const f=P.filter(p=>p.demo[0]==='F').length,m=P.length-f;const youth=P.filter(p=>+p.demo.split('·')[1]<=35).length;
+    return `${crumb("Monitoring & Evaluation")}<h2 class="page-h">Monitoring &amp; Evaluation</h2>
+    <p class="page-sub">Disaggregated reporting${STATE.filterProv?' · '+PROV[STATE.filterProv]:''} · figures update live as beneficiaries change</p>
+    ${provFilterSel()?`<div class="toolbar">${provFilterSel()}</div>`:''}
+    <div class="cards">${card("Female producers",f,P.length?Math.round(f/P.length*100)+"%":"","#ff6b9d")}${card("Male producers",m,"","#4aa3ff")}${card("Youth (≤35)",youth,"","#26c281")}${card("Total in scope",P.length,"","#e3b341")}</div>
+    <div class="row"><div class="panel"><h3>By gender</h3>${barChart([["Female",f],["Male",m]])}</div><div class="panel"><h3>By age group</h3>${barChart([["18–35 (Youth)",youth],["36+",P.length-youth]])}</div></div>
+    <button class="btn" onclick='exportPdf("M&E Summary Report",buildMandeLines())'>⬇ Export report (PDF)</button>
+    <button class="btn alt" onclick='exportMandeCsv()'>⬇ Export data (Excel)</button>`;},
+
+  benef:()=>{let base=scopedProducers(); if(STATE.filterProv) base=base.filter(p=>p.prov===STATE.filterProv); const list=sortProducers(flt(base,['name','dist','ent','demo','email']));
+    const selStyle="padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)";
+    const provSel=STATE.scopeKind?'':`<select onchange="STATE.filterProv=this.value;renderView()" style="${selStyle}"><option value="">Filter: All provinces</option>${Object.entries(PROV).map(([k,v])=>`<option value="${k}" ${STATE.filterProv===k?'selected':''}>${v} only</option>`).join('')}</select>`;
+    const sortSel=`<select onchange="STATE.sort=this.value;renderView()" style="${selStyle}"><option value="name"${(STATE.sort||'name')==='name'?' selected':''}>Sort: Name A–Z</option><option value="name_desc"${STATE.sort==='name_desc'?' selected':''}>Name Z–A</option><option value="prov"${STATE.sort==='prov'?' selected':''}>Province</option><option value="status"${STATE.sort==='status'?' selected':''}>Status</option></select>`;
+    return `${crumb("Beneficiaries")}<h2 class="page-h">Beneficiaries — Farmer Register</h2>
+    <p class="page-sub">${list.length} shown${scopeLabel()?" in "+scopeLabel():STATE.filterProv?" in "+PROV[STATE.filterProv]:""} · RICA-verified · saved in the database</p>
+    ${searchBar(`${provSel}${sortSel}<button class="btn" onclick="openAddBeneficiary()">+ Add beneficiary</button><button class="btn alt" onclick='exportPdf("Beneficiary List",buildBenefLines())'>⬇ PDF</button><button class="btn alt" onclick='exportCsv("beneficiaries",["Name","Province","District","Enterprise","Status","RICA","Email"],scopedProducers().map(p=>[p.name,PROV[p.prov]||p.prov,p.dist,p.ent,p.status,p.rica,p.email||""]))'>⬇ Excel</button>`)}
+    <div class="panel"><table><thead><tr><th>Producer</th><th>Province</th><th>District</th><th>Enterprise</th><th>Status</th><th>RICA</th><th>Actions</th></tr></thead><tbody>
+    ${list.map(p=>`<tr><td><span class="avatar">${ini(p.name)}</span><a style="cursor:pointer;color:var(--accent);font-weight:600" onclick="openProfile(${p.id})">${p.name}</a> <span style="color:var(--muted);font-size:11px">(${p.demo})</span><br><span style="color:var(--muted);font-size:11px">${p.email||''}</span></td><td>${PROV[p.prov]}</td><td>${p.dist}</td><td>${p.ent}</td><td>${pill(p.status)}</td><td>${pill(p.rica)}</td>
+      <td style="white-space:nowrap"><button class="btn sm alt" onclick="toggleSuspend(${p.id})">${p.status==='Suspended'?'Reactivate':'Suspend'}</button> <button class="btn sm danger" onclick="removeBeneficiary(${p.id})">🗑</button></td></tr>`).join("")||`<tr><td colspan="7" style="color:var(--muted)">No matches.</td></tr>`}
+    </tbody></table></div>
+    <div class="note">RICA verification confirms the cellphone is registered in the producer's own name before any voucher is issued (ToR 4.14).</div>`;},
+
+  profile:()=>{const p=STATE.producers.find(x=>x.id===STATE.selected);
+    if(!p)return `<button class="btn alt" onclick="go('benef')">← Back</button><p>Producer not found.</p>`;
+    const vs=STATE.vouchers.filter(v=>v.who===p.name);const total=vs.reduce((s,v)=>s+v.val,0);
+    return `${crumb("Beneficiaries / "+p.name)}
+    <button class="btn alt" onclick="go('benef')">← Back to register</button>
+    <div class="panel" style="margin-top:14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+      <span class="avatar" style="width:60px;height:60px;font-size:22px">${ini(p.name)}</span>
+      <div style="flex:1;min-width:200px"><h2 class="page-h" style="margin:0">${p.name}</h2>
+        <div style="color:var(--muted);font-size:13px;margin-top:2px">${p.ent} · ${PROV[p.prov]} (${p.dist})</div>
+        <div style="margin-top:8px">${pill(p.status)} ${pill(p.rica==='Verified'?'Verified':'Mismatch')} <span class="pill info">${p.demo}</span></div></div>
+      <div style="text-align:right"><button class="btn sm alt" onclick="toggleSuspend(${p.id})">${p.status==='Suspended'?'Reactivate':'Suspend'}</button>
+        <button class="btn sm danger" onclick="removeBeneficiary(${p.id})">🗑 Remove</button></div>
+    </div>
+    <div class="factgrid">
+      <div class="fact"><div class="fk">Vouchers received</div><div class="fv">${vs.length}</div></div>
+      <div class="fact"><div class="fk">Total value</div><div class="fv">${money(total)}</div></div>
+      <div class="fact"><div class="fk">Redeemed</div><div class="fv">${vs.filter(v=>v.status==='Redeemed').length}</div></div>
+      <div class="fact"><div class="fk">RICA status</div><div class="fv">${p.rica}</div></div>
+    </div>
+    <div class="row">
+      <div class="panel"><h3>Vouchers</h3>${vs.length?voucherTable(vs):`<p style="color:var(--muted);font-size:13px">No vouchers yet. Issue one from the Voucher Issuance page.</p>`}</div>
+      <div class="panel"><h3>Activity timeline</h3><ul class="tl">
+        ${vs.map(v=>`<li><div class="tt">2026</div>Voucher ${v.no} — ${v.pkg} (${money(v.val)}) · ${v.status}</li>`).join("")}
+        <li><div class="tt">On registration</div>Screened from Farmer Register · RICA ${p.rica}</li>
+      </ul></div>
+    </div>`;},
+
+  packages:()=>`${crumb("Subsidy Packages")}<h2 class="page-h">Subsidy Packages — Setup</h2>
+    <p class="page-sub">Superusers configure the support packages that can be assigned to producers (ToR 4.11)</p>
+    ${searchBar(`<button class="btn" onclick="openAddPackage()">+ Create package</button>`)}
+    <div class="panel"><table><thead><tr><th>Package</th><th>Included inputs</th><th>Value</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    ${flt(STATE.packages,['name','items']).map(p=>`<tr><td><b>${p.name}</b></td><td>${p.items}</td><td>${money(p.val)}</td><td>${pill(p.status)}</td><td><button class="btn sm danger" onclick="removePackage('${p.name.replace(/'/g,"\\'")}')">🗑</button></td></tr>`).join("")}
+    </tbody></table></div>`,
+
+  vouchers:()=>{let V=scopedVouchers(); if(STATE.filterProv) V=V.filter(v=>v.prov===STATE.filterProv); const actives=scopedProducers().filter(p=>p.status==='Active');
+    return `${crumb("Voucher Issuance")}<h2 class="page-h">Voucher Issuance</h2>
+    <p class="page-sub">Issue a voucher and watch it appear in the register and dashboard</p>
+    <div class="note" style="margin-bottom:14px">📦 These are <b>commodity vouchers</b> — the producer receives a fixed <b>package of inputs (goods)</b>, never cash. Each voucher is <b>valid only until the end of the financial year</b> (${fmtDate(STATE.vouchers.find(v=>v.expiry)?STATE.vouchers.find(v=>v.expiry).expiry:'')}).</div>
+    <div class="row"><div class="panel"><h3>Issue a new voucher</h3>
+      <div class="field"><label>Producer</label><select id="v_prod">${actives.map(p=>`<option>${p.name}</option>`).join("")}</select></div>
+      <div class="field"><label>Subsidy package</label><select id="v_pkg">${STATE.packages.map(p=>`<option>${p.name}</option>`).join("")}</select></div>
+      <div class="field"><label>Programme</label><select><option>Comprehensive Producer Development Support</option><option>Ilima/Letsema</option></select></div>
+      <button class="btn gold" onclick="issueVoucher()">Issue voucher &amp; send SMS →</button>
+      <p class="note" style="margin-top:12px">On issue, the system generates a unique voucher number, SMSes the producer, and logs it to the audit trail.</p></div>
+      <div class="panel"><h3>Voucher register (${V.length})</h3>${provFilterSel()?`<div class="toolbar">${provFilterSel()}</div>`:''}${voucherTable(V)}</div></div>`;},
+
+  cat:()=>`${crumb("Input Catalogue")}<h2 class="page-h">Input Catalogue Management</h2>
+    <p class="page-sub">Only approved inputs can be redeemed (ToR 4.4)</p>
+    ${searchBar(`<button class="btn" onclick="openAddInput()">+ Add input</button>`)}
+    <div class="panel"><table><thead><tr><th>Input</th><th>Category</th><th>Unit price</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    ${flt(STATE.catalogue,['n','c']).map(i=>`<tr><td>${i.n}</td><td>${i.c}</td><td>${money(i.p)}</td><td>${pill(i.s)}</td><td><button class="btn sm danger" onclick="removeInput('${i.n.replace(/'/g,"\\'")}')">🗑</button></td></tr>`).join("")}
+    </tbody></table></div>`,
+
+  suppliers:()=>{const list=flt(STATE.dealers,['n','dist','c','company_reg','vat']);
+    return `${crumb("Suppliers Directory")}<h2 class="page-h">Suppliers &amp; Agro-Dealers</h2>
+    <p class="page-sub">${STATE.dealers.length} registered outlets · new registrations start as <b>Pending</b> until accredited (ToR 4.7)</p>
+    ${searchBar(`<button class="btn" onclick="showAddDealer()">+ Register dealer</button>`)}
+    <div class="panel"><table><thead><tr><th>Dealer / Supplier</th><th>Province</th><th>District</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    ${list.map(d=>`<tr><td><a style="cursor:pointer;color:var(--accent);font-weight:600" onclick="viewDealer(${d.id})">${d.n}</a></td><td>${PROV[d.prov]||d.prov}</td><td>${d.dist}</td><td>${d.c}</td><td>${pill(d.s)}</td>
+      <td style="white-space:nowrap"><button class="btn sm alt" onclick="viewDealer(${d.id})">View</button> ${d.s==='Pending'?`<button class="btn sm" onclick="approveDealer(${d.id})">Accredit</button>`:''} <button class="btn sm danger" onclick="delDealer(${d.id})">🗑</button></td></tr>`).join("")||`<tr><td colspan="6" style="color:var(--muted)">No dealers.</td></tr>`}
+    </tbody></table></div>`;},
+
+  users:()=>`${crumb("Users & Access")}<h2 class="page-h">Users &amp; Access Management</h2>
+    <p class="page-sub">Role-based access across national / provincial / district levels (ToR 4.1)</p>
+    ${searchBar(`<button class="btn" onclick="openAddUser()">+ Add user</button>`)}
+    <div class="panel"><h3>System users (${STATE.users.length})</h3><table><thead><tr><th>Name</th><th>Role</th><th>Level</th><th>Scope</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    ${flt(STATE.users,['n','r','sc']).map(u=>`<tr><td><span class="avatar">${ini(u.n)}</span>${u.n}</td><td>${u.r}</td><td>${u.lvl}</td><td>${u.sc}</td><td>${pill(u.s)}</td><td><button class="btn sm danger" onclick="removeUser('${u.n.replace(/'/g,"\\'")}')">🗑</button></td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="panel"><h3>Role permissions matrix</h3>${plain(['Permission','National','Provincial','District','Producer'],[['Issue / approve vouchers','✔ All','✔ Province','✘','—'],['View beneficiaries','✔ All','✔ Province','✔ District','Own only'],['Manage input catalogue','✔','✘','✘','—'],['Approve payments','✔','✘','✘','—'],['Run M&E reports','✔ All','✔ Province','✔ District','—'],['Manage users','✔','Province only','✘','—']])}
+    <p class="note" style="margin-top:12px">Try the <b>Provincial Admin</b> login — it sees only KwaZulu-Natal data and fewer menus.</p></div>`,
+
+  reports:()=>`${crumb("Reports & Export")}<h2 class="page-h">Reports &amp; Export Centre</h2>
+    <p class="page-sub">Buttons download real files (ToR 4.13)</p>
+    <div class="row"><div class="panel"><h3>Standard reports</h3>
+      ${[["Producers supported by province","prov"],["Vouchers issued vs redeemed","vou"],["Beneficiary list","ben"],["M&E disaggregation","mande"]].map(([r,k])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px">📄 ${r}</span><span><button class="btn alt sm" onclick="stdPdf('${k}','${r}')">PDF</button> <button class="btn alt sm" onclick="stdCsv('${k}')">Excel</button></span></div>`).join("")}
+    </div><div class="panel"><h3>Ad-hoc report</h3>
+      <div class="field"><label>Report on</label><select id="r_on"><option>Vouchers</option><option>Beneficiaries</option></select></div>
+      <div class="field"><label>Group by</label><select><option>Province</option><option>Status</option><option>Gender</option></select></div>
+      <div class="field"><label>Format</label><select id="r_fmt"><option>PDF</option><option>Excel (CSV)</option></select></div>
+      <button class="btn" onclick="adhoc()">⚙ Generate &amp; download</button></div></div>`,
+
+  audit:()=>`${crumb("Audit Trail")}<h2 class="page-h">Audit Trail</h2><p class="page-sub">Tamper-evident record of every transaction (ToR 4.10)</p>
+    <div class="panel">${plain(['Timestamp','Actor','Event','Type'],STATE.audit.map(a=>[a.t,a.a,a.e,`<span class="pill ${a.c}">${a.k}</span>`]))}</div>`,
+
+  griev:()=>`${crumb("Grievances")}<h2 class="page-h">Grievance Redressal</h2><p class="page-sub">Log and resolve producer queries — saved in the database (ToR 4.12)</p>
+    ${searchBar(`<button class="btn" onclick="openAddGrievance()">+ Log grievance</button>`)}
+    <div class="panel"><table><thead><tr><th>Ref</th><th>Producer</th><th>Issue</th><th>Status</th><th></th></tr></thead><tbody>
+    ${flt(STATE.grievances,['ref','who','issue']).map(g=>`<tr><td>${g.ref}</td><td>${g.who}</td><td>${g.issue}</td><td>${pill(g.status)}</td><td>${g.status!=='Resolved'?`<button class="btn sm alt" onclick="resolveGrievance(${g.id})">Resolve</button>`:''}</td></tr>`).join("")||`<tr><td colspan="5" style="color:var(--muted)">No grievances logged.</td></tr>`}
+    </tbody></table></div>`,
+
+  coverage:()=>{
+    const cov=[
+      ["4.1","Role-based access & dedicated portals","Shown","ok","4 portals, Users & Access, role matrix, provincial scoping"],
+      ["4.2","Integration to Farmer Register / DSS / Directory","Concept","wait","Referenced on home page & screens; real link is a build task"],
+      ["4.3","Beneficiary selection & subsidy approval","Shown","ok","Beneficiaries register, packages, FI deposit clearing"],
+      ["4.4","Input catalogue management","Shown","ok","Catalogue add/remove, approved vs under review"],
+      ["4.5","Entitlement management","Partial","wait","Covered via Subsidy Packages + voucher issuance"],
+      ["4.6","Communication — SMS voucher & advisory","Simulated","wait","'SMS sent' confirmation + phone advisory message"],
+      ["4.7","Supplier / agro-dealer portal","Shown","ok","Dealer dashboard, redemptions, invoices"],
+      ["4.8","Payments processing + bank/BAS integration","Partial","wait","FI clearing & payment approval shown; BAS referenced"],
+      ["4.9","Online/offline redemption + OTP","Shown","ok","Mobile OTP flow + offline sync note"],
+      ["4.10","Audit trail","Shown","ok","Full audit log screen"],
+      ["4.11","Monitoring & evaluation (disaggregated)","Shown","ok","Gender/youth/age dashboards + package setup"],
+      ["4.12","Grievance redressal","Shown","ok","Grievances tracking screen"],
+      ["4.13","Reporting / BI / export CSV·Excel·PDF","Shown","ok","Reports centre with real file downloads"],
+      ["4.14","RICA verification of producers","Simulated","wait","Status shown & mismatch flagged"],
+    ];
+    const shown=cov.filter(c=>c[2]==='Shown').length;
+    const build=[
+      ["Mandated technology (Java/C#, SQL Server/Oracle, Xamarin)","Build phase"],
+      ["Real integrations (Farmer Register, DSS, BAS, payment gateway)","Build phase"],
+      ["Security & compliance (PCI-DSS, PASA registration)","Build phase"],
+      ["Real RICA / SMS / OTP services + offline sync engine","Build phase"],
+      ["Real database, user accounts, hosting, deployment, training, maintenance","Build phase"],
+    ];
+    return `${crumb("Requirements Coverage")}<h2 class="page-h">Requirements Coverage</h2>
+    <p class="page-sub">How this prototype maps to the Terms of Reference (Table 1, capabilities 4.1–4.14)</p>
+    <div class="cards">${card("Capabilities represented","14 / 14","")}${card("Fully demonstrated",shown,"")}${card("Simulated / partial",14-shown,"")}${card("Production build items",build.length,"")}</div>
+    <div class="panel"><h3>The 14 system capabilities</h3>
+      <table><thead><tr><th>#</th><th>Capability</th><th>In prototype</th><th>Where / note</th></tr></thead><tbody>
+      ${cov.map(c=>`<tr><td>${c[0]}</td><td>${c[1]}</td><td><span class="pill ${c[3]}">${c[2]}</span></td><td style="color:var(--muted)">${c[4]}</td></tr>`).join("")}
+      </tbody></table></div>
+    <div class="panel"><h3>Delivered in the 12-month build (not in this prototype)</h3>
+      <table><thead><tr><th>Production item</th><th>Status</th></tr></thead><tbody>
+      ${build.map(b=>`<tr><td>${b[0]}</td><td><span class="pill info">${b[1]}</span></td></tr>`).join("")}
+      </tbody></table>
+      <p class="note" style="margin-top:12px">This prototype is a front-end demonstration that proves understanding of every requirement. The production system is built on the Department's mandated stack during the 12-month project.</p>
+      <button class="btn" style="margin-top:12px" onclick='exportPdf("Requirements Coverage",["THE 14 CAPABILITIES (ToR Table 1):",${JSON.stringify(cov.map(c=>c[0]+" "+c[1]+"  ->  "+c[2])).slice(1,-1)},"","BUILD-PHASE ITEMS (not in prototype):",${JSON.stringify(build.map(b=>"- "+b[0])).slice(1,-1)}])'>⬇ Export coverage (PDF)</button>
+    </div>`;},
+
+  links:()=>{
+    const node=(t,d,diff)=>{const col={g:'#2e7d32',a:'#b9770a',r:'#c0392b'}[diff];return `<div style="border:2px solid ${col};border-radius:10px;padding:12px;background:var(--card);text-align:center"><div style="font-weight:700;font-size:13px">${t}</div><div style="font-size:11px;color:var(--muted);margin-top:3px">${d}</div></div>`;};
+    return `${crumb("System Links")}<h2 class="page-h">System Links — Integration Map</h2>
+    <p class="page-sub">The e-Voucher connects to 8 external systems · colour shows difficulty</p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;font-size:12px;flex-wrap:wrap"><span class="pill ok">🟢 Easy</span><span class="pill wait">🟡 Medium — needs DOA access</span><span class="pill no">🔴 Hard — needs outside permission</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;max-width:780px">
+      ${node('SMS gateway','OTP · voucher · advisory','g')}${node('Payment gateway','online payments','g')}${node('Extension Directory','officer contacts','a')}
+      ${node('Farmer Register','central producer list','a')}<div style="border:3px solid var(--accent);border-radius:12px;padding:16px;background:var(--accent);color:#fff;text-align:center;display:flex;flex-direction:column;justify-content:center"><div style="font-weight:800;font-size:14px">e-VOUCHER MODULE</div><div style="font-size:11px;opacity:.9;margin-top:3px">web + mobile + database</div></div>${node('Decision Support System','weather · markets · GIS','a')}
+      ${node('Banks / financial inst.','clearing · settlement','r')}${node('RICA verification','number ↔ producer','r')}${node('BAS mainframe','govt pays dealers','r')}
+    </div>
+    <p class="note" style="margin-top:18px;max-width:780px">Internal plumbing (built by the service provider): mobile app ⇄ backend API ⇄ SQL Server / Oracle database. The three red links are hard because of institutional / legal access, not coding.</p>
+    <button class="btn" style="margin-top:8px" onclick='exportPdf("System Links",["8 EXTERNAL LINKS (easiest to hardest):","","1. SMS gateway ............. Easy","2. Payment gateway ......... Easy","3. Extension Directory ..... Medium (DOA access)","4. Farmer Register ......... Medium (DOA access)","5. Decision Support System . Medium (DOA access)","6. Banks / financial inst. . Hard","7. RICA verification ....... Hard","8. BAS mainframe ........... Hardest","","Internal: mobile app <-> backend API <-> database"])'>⬇ Export links (PDF)</button>`;},
+
+  distribute:()=>{
+    const initCrit={prov:STATE.scopeKind==='prov'?STATE.scope:'',dist:STATE.scopeKind==='dist'?STATE.scope:''};
+    const init=matchClient(initCrit);
+    const provOpts=Object.entries(PROV).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+    return `${crumb("Targeted Distribution")}<h2 class="page-h">Targeted Distribution</h2>
+    <p class="page-sub">Select beneficiaries by criteria (e.g. women, youth) — not by individual — and issue inputs to all of them automatically</p>
+    <div class="row">
+      <div class="panel"><h3>1. Choose who qualifies</h3>
+        <div class="field"><label>Gender</label><select id="t_gender" onchange="previewDist()"><option value="">Anyone</option><option value="F">Women only</option><option value="M">Men only</option></select></div>
+        <div class="field"><label><input type="checkbox" id="t_youth" onchange="previewDist()" style="width:auto;margin-right:6px">Youth only (35 or younger)</label></div>
+        ${STATE.scopeKind?`<div class="note">Scope: ${scopeLabel()} (locked to your access level)</div>`:`<div class="field"><label>Province</label><select id="t_prov" onchange="previewDist()"><option value="">All provinces</option>${provOpts}</select></div>`}
+        <div class="field" style="margin-top:12px"><label>2. Input package to distribute</label><select id="t_pkg">${STATE.packages.map(p=>`<option value="${p.name}">${p.name} — ${money(p.val)}</option>`).join("")}</select></div>
+        <div id="distPreview" class="note"><b>${init.length}</b> beneficiaries currently match.</div>
+        <button class="btn gold" style="margin-top:12px" onclick="distributeNow()">🎯 Distribute to all matching →</button>
+        <p class="note" style="margin-top:10px">Each matching beneficiary is issued a voucher automatically and notified — no need to pick people one by one.</p>
+      </div>
+      <div class="panel"><h3>Matching beneficiaries</h3><div id="distList">${plain(['Name','Province','District','Gender·Age'],init.slice(0,50).map(p=>[p.name,PROV[p.prov]||p.prov,p.dist,p.demo]))}</div></div>
+    </div>`;
+  },
+
+  comms:()=>{
+    const aud0={prov:STATE.scopeKind==='prov'?STATE.scope:'',dist:STATE.scopeKind==='dist'?STATE.scope:''};
+    return `${crumb("Communications")}<h2 class="page-h">Communications</h2>
+    <p class="page-sub">Email or SMS a group of beneficiaries by criteria — kept in a log (ToR 4.6)</p>
+    <div class="note" style="margin-bottom:14px">⚠️ Demo: messages are logged with recipient counts but <b>not actually delivered</b> yet — production connects a real email service and SMS gateway. See "About this demo".</div>
+    <div class="row">
+      <div class="panel"><h3>New message</h3>
+        <div class="field"><label>Send to</label><select id="c_aud" onchange="previewComms()"><option value="all">All beneficiaries</option><option value="F">Women</option><option value="youth">Youth (≤35)</option>${STATE.scopeKind?'':'<optgroup label="Province">'+Object.entries(PROV).map(([k,v])=>`<option value="prov:${k}">${v}</option>`).join('')+'</optgroup>'}</select></div>
+        <div class="field"><label>Channel</label><select id="c_chan"><option>Email</option><option>SMS</option></select></div>
+        <div class="field"><label>Subject</label><input id="c_subj" placeholder="e.g. Your voucher is ready"></div>
+        <div class="field"><label>Message</label><input id="c_body" placeholder="Type your message to beneficiaries"></div>
+        <div id="commsPreview" class="note"><b>${matchClient(aud0).length}</b> recipients.</div>
+        <button class="btn" style="margin-top:12px" onclick="sendComms()">✉️ Send →</button>
+      </div>
+      <div class="panel"><h3>Sent messages (${(STATE.messages||[]).length})</h3>${plain(['When','To','Channel','Subject','Recipients'],(STATE.messages||[]).map(m=>[m.ts,m.audience,m.channel,m.subject,m.recipients]))}</div>
+    </div>`;
+  },
+
+  about:()=>`${crumb("About this demo")}<h2 class="page-h">About this demo — honest notes</h2>
+    <p class="page-sub">What is real and what is still simulated in this version of the system</p>
+    <div class="panel"><h3>✅ Real in this system</h3>
+      <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.7">
+        <li>Data is <b>saved in a real database</b> — beneficiaries, packages, vouchers, grievances, communications and the audit trail all persist.</li>
+        <li><b>National / Provincial / District</b> access levels work and scope what each user sees.</li>
+        <li>Criteria-based <b>targeted distribution</b> (e.g. women, youth) and bulk <b>communications</b> work.</li>
+        <li><b>PDF / Excel exports</b> contain the real saved data.</li>
+      </ul></div>
+    <div class="panel"><h3>⚠️ Simulated / demo only</h3>
+      <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.7">
+        <li><b>Bank integration</b> is a demo screen — a real bank link needs the bank's agreement and a registered payment gateway.</li>
+        <li><b>Email &amp; SMS are simulated</b> — they are logged with recipient counts, but no real message is delivered yet. Production would connect an email service and an SMS gateway.</li>
+        <li><b>OTP</b> is shown on screen for testing; in production it is texted to the producer.</li>
+        <li><b>RICA verification</b> is shown as a status, not a live check (needs official data access).</li>
+        <li>Logins use simple demo passwords — not production-grade security.</li>
+      </ul></div>
+    <div class="panel"><h3>ℹ️ About hosting</h3>
+      <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.7">
+        <li>On the free/Starter hosting plan, the database may <b>reset to seed data</b> when the app restarts — unless a persistent disk or a cloud database is added.</li>
+        <li>The tender's <b>production</b> system would be built on the required stack (C#/.NET + SQL Server/Oracle).</li>
+      </ul></div>`,
+
+  applications:()=>{
+    const A=STATE.applications||[]; const pending=A.filter(a=>a.status==='Applied');
+    const provOpts=Object.entries(PROV).map(([k,v])=>`<option value="${k}" ${(k===STATE.scope&&STATE.scopeKind==='prov')?'selected':''}>${v}</option>`).join("");
+    return `${crumb("Applications")}<h2 class="page-h">Farmer Applications</h2>
+    <p class="page-sub">The application → screening → approval flow. Approving adds the farmer to the register.</p>
+    <div class="panel" style="background:linear-gradient(90deg,rgba(46,125,50,.07),transparent)"><b>Flow:</b> 1) Farmer applies → 2) RICA + Register check → 3) Screen against criteria → 4) District recommends → 5) Province / National approves → 6) Voucher issued. <span style="color:var(--muted)">Separation of duties: whoever captures is not who approves.</span></div>
+    <div class="row">
+      <div class="panel"><h3>Capture an application</h3>
+        <div class="field"><label>Full name</label><input id="a_name" placeholder="Farmer name"></div>
+        <div class="row"><div class="field"><label>Province</label><select id="a_prov" onchange="fillDist('a_prov','a_dist')">${provOpts}</select></div><div class="field"><label>District</label><select id="a_dist">${distOptions((STATE.scopeKind==='prov'&&STATE.scope)?STATE.scope:Object.keys(PROV)[0])}</select></div></div>
+        <div class="row"><div class="field"><label>Enterprise</label><input id="a_ent" placeholder="e.g. Maize · 2ha"></div><div class="field"><label>Gender·Age</label><input id="a_demo" placeholder="e.g. F·29"></div></div>
+        <button class="btn" onclick="applyNow()">Submit application</button>
+      </div>
+      <div class="panel"><h3>Adjudication queue (${pending.length} new)</h3>
+        <div class="note" style="margin-bottom:10px">You are signed in as <b>${meLabel()}</b>. District officers <b>recommend</b>; province/national <b>approve</b>. The recommender and approver must be different people.</div>
+        <table><thead><tr><th>Name</th><th>Province</th><th>Status / trail</th><th>Decision</th></tr></thead><tbody>
+      ${A.map(a=>`<tr><td>${a.name} <span style="color:var(--muted);font-size:11px">(${a.demo})</span><br><span style="color:var(--muted);font-size:11px">${a.ent}</span></td><td>${PROV[a.prov]||a.prov}</td>
+        <td>${pill(a.status)}${a.recommended_by?`<br><span style="font-size:11px;color:var(--muted)">rec: ${a.recommended_by}</span>`:''}${a.approved_by?`<br><span style="font-size:11px;color:var(--muted)">app: ${a.approved_by}</span>`:''}${a.reason?`<br><span style="font-size:11px;color:#c0392b">reason: ${a.reason}</span>`:''}</td>
+        <td>${appActions(a)}</td></tr>`).join("")||`<tr><td colspan="4" style="color:var(--muted)">No applications.</td></tr>`}
+      </tbody></table></div>
+    </div>`;
+  },
+
+  redemptions:()=>{
+    const issued=STATE.vouchers.filter(v=>v.status==='Issued'&&!isExpired(v));
+    const expired=STATE.vouchers.filter(v=>isExpired(v));
+    const accredited=STATE.dealers.filter(d=>d.s==='Active');
+    const dealerPick=STATE.role==='dealer'?`<input value="AgriMart Tshwane" disabled style="max-width:260px;padding:9px;border:1px solid var(--line);border-radius:7px">`:`<select id="redeemDealer" style="max-width:280px;padding:9px;border:1px solid var(--line);border-radius:7px">${accredited.map(d=>`<option>${d.n}</option>`).join("")||'<option value="">(no accredited dealers yet)</option>'}</select>`;
+    return `${crumb("Redemptions")}<h2 class="page-h">Redemptions</h2>
+    <p class="page-sub">Redeem a voucher with the producer's OTP — payment to the supplier is raised <b>immediately</b> (ToR 4.9)</p>
+    <div class="note" style="margin-bottom:14px">🔐 In production the OTP is texted to the producer; shown here for testing. ${expired.length?`<b>${expired.length} voucher(s) have expired</b> (financial year) and can no longer be redeemed.`:''}</div>
+    <div class="field" style="max-width:380px"><label>Redeeming at agro-dealer</label>${dealerPick}</div>
+    <div class="panel"><h3>Vouchers awaiting redemption (${issued.length})</h3>
+      <table><thead><tr><th>Voucher No.</th><th>Producer</th><th>Package</th><th>Value</th><th>Valid until</th><th>OTP (demo)</th><th></th></tr></thead><tbody>
+      ${issued.map(v=>`<tr><td>${v.no}</td><td>${v.who}</td><td>${v.pkg}</td><td>${money(v.val)}</td><td>${fmtDate(v.expiry)}</td><td><span style="font-family:Consolas,monospace;background:rgba(0,0,0,.06);padding:1px 6px;border-radius:4px">${v.otp}</span></td><td><button class="btn sm gold" onclick="doRedeem(${v.id},'${v.no}')">Redeem</button></td></tr>`).join("")||`<tr><td colspan="7" style="color:var(--muted)">Nothing awaiting redemption — issue or distribute vouchers first.</td></tr>`}
+      </tbody></table></div>`;
+  },
+
+  payments:()=>{
+    let P=STATE.payments||[]; if(STATE.filterProv) P=P.filter(x=>provOf(x.who)===STATE.filterProv); const total=P.reduce((s,x)=>s+x.amount,0);
+    return `${crumb("Payments")}<h2 class="page-h">Payments to Suppliers</h2>
+    <p class="page-sub">Each payment is created <b>automatically the instant a voucher is redeemed</b>, paid to the supplier via the payment gateway</p>
+    <div class="cards">${card("Payments made",P.length,"","#4aa3ff")}${card("Total paid",money(total),"","#26c281")}${card("Channel","Gateway","","#e3b341")}</div>
+    <div class="panel"><h3>Payment register</h3>${provFilterSel()?`<div class="toolbar">${provFilterSel()}</div>`:''}<table><thead><tr><th>When</th><th>Supplier</th><th>For voucher</th><th>Producer</th><th>Amount</th><th>Gateway ref</th><th>Status</th></tr></thead><tbody>
+    ${P.map(x=>`<tr><td>${x.ts}</td><td>${x.supplier}</td><td>${x.voucher_no}</td><td>${x.who}</td><td>${money(x.amount)}</td><td>${x.ref}</td><td>${pill(x.status)}</td></tr>`).join("")||`<tr><td colspan="7" style="color:var(--muted)">No payments yet — redeem a voucher to trigger one.</td></tr>`}
+    </tbody></table></div>
+    <div class="note">Money goes government → supplier (the producer receives goods, not cash). The gateway executes the immediate payout; the bank is the supplier's destination account. Real gateway/BAS integration is a production step — see "About this demo".</div>`;
+  },
+
+  controls:()=>`${crumb("Anti-Corruption Controls")}<h2 class="page-h">Anti-Corruption Controls</h2>
+    <p class="page-sub">How the system is designed to block corruption and protect public funds</p>
+    <div class="panel"><table><thead><tr><th>Risk</th><th>Control in this system</th></tr></thead><tbody>
+    ${[["Fake / ghost beneficiaries","RICA name check + Farmer Register match; application and approval done by different roles"],["Official approves their own people","Role-based approval (district recommends, province/national approves); every action audit-logged"],["Double-dipping (many vouchers, one farmer)","System blocks a second active voucher for the same beneficiary + package"],["Diversion / cash-out","Commodity voucher (no cash); redemption limited to approved inputs; OTP proves the real farmer collected"],["Collusion with suppliers","Suppliers must be accredited; payment only for verified redemptions"],["Paying for goods not delivered","Proof-of-redemption (OTP) required before payment; payment auto-generated from redemption"],["Tampering with records","Immutable, time-stamped audit trail of every action"],["Spending past the budget year","Voucher expiry = financial-year end; expired vouchers cannot be redeemed"]].map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="note">The core protection: <b>every Rand paid traces to a redeemed voucher, which traces to an approved, RICA-verified beneficiary.</b></div>`,
+
+  feedback:()=>{const F=STATE.feedback||[];const avg=F.length?(F.reduce((s,x)=>s+x.rating,0)/F.length).toFixed(1):'—';
+    return `${crumb("Ratings & Feedback")}<h2 class="page-h">Ratings &amp; Feedback</h2><p class="page-sub">What users think of e-PSS · a rating box also pops up periodically</p>
+    <div class="cards">${card("Average rating",avg+' ★')}${card("Responses",F.length)}</div>
+    <div style="margin-bottom:14px"><button class="btn gold" onclick="showFeedback()">⭐ Give feedback now</button></div>
+    <div class="panel"><table><thead><tr><th>When</th><th>Role of rater</th><th>Rating</th><th>Comment</th></tr></thead><tbody>
+    ${F.map(x=>`<tr><td>${x.ts}</td><td>${x.role}</td><td style="color:var(--gold)">${'★'.repeat(x.rating)}${'☆'.repeat(5-x.rating)}</td><td>${x.comment||''}</td></tr>`).join("")||`<tr><td colspan="4" style="color:var(--muted)">No feedback yet.</td></tr>`}
+    </tbody></table></div>`;
+  },
+
+  integrations:()=>{const reg=STATE.register||[];const enrolled=reg.filter(f=>f.enrolled).length;const pend=reg.length-enrolled;
+    const sys=[['Farmer / Producer Register','farmer-register','The central register of farmers — beneficiaries are drawn from here'],['Decision Support System (DSS)','dss','Weather, risk and advisory feed'],['Extension Directory','extension-directory','Extension & advisory officer contacts'],['RICA verification','rica','Confirms a cellphone is registered in the producer\'s name'],['Payment gateway','gateway','Immediate payout to suppliers'],['BAS (Basic Accounting System)','bas','Government disbursement & reconciliation'],['SMS gateway','sms','Voucher numbers, OTPs & notifications']];
+    return `${crumb("Integrations")}<h2 class="page-h">System Integrations</h2>
+    <p class="page-sub">Live connections to the Farmer Register and other government systems — <b>simulated APIs that mirror the real ones</b></p>
+    <div class="cards">${card("Farmers in register",reg.length,"","#4aa3ff")}${card("Enrolled beneficiaries",enrolled,"","#26c281")}${card("Awaiting enrolment",pend,"","#e3b341")}</div>
+    <div style="margin-bottom:14px"><button class="btn" onclick="syncRegister()">⟳ Sync new farmers from the Register</button></div>
+    <div class="panel"><h3>Connected systems</h3><table><thead><tr><th>System</th><th>Status</th><th>Live response</th><th></th></tr></thead><tbody>
+    ${sys.map(s=>`<tr><td><b>${s[0]}</b><br><span style="font-size:11px;color:var(--muted)">${s[2]}</span></td><td><span class="pill ok">● Connected</span></td><td style="font-size:11px;color:var(--muted);max-width:340px;word-break:break-word" id="int_${s[1]}">—</td><td><button class="btn sm alt" onclick="testIntegration('${s[1]}')">Test</button></td></tr>`).join("")}
+    </tbody></table>
+    <div class="note" style="margin-top:12px">These integration endpoints are <b>simulated</b> and return data in the same shape the real systems would. In production they connect to the actual Farmer Register, DSS, BAS, RICA, gateway and SMS provider (see "About this demo").</div></div>`;
+  },
+
+  faqs:()=>{const qa=[
+    ["What is e-PSS?","The e-Producer Support System — government distributes subsidised farming inputs to producers through secure commodity vouchers, tracked end-to-end."],
+    ["Is the voucher money?","No. It is a commodity voucher: the producer receives a fixed package of inputs (goods), never cash."],
+    ["How long is a voucher valid?","Until the end of the financial year (31 March). It can never carry into the next budget year, and expired vouchers cannot be redeemed."],
+    ["How does a farmer get support?","They apply; the application is RICA-checked and screened; a district officer recommends and a provincial/national official approves; then a voucher is issued by SMS."],
+    ["How is a voucher redeemed?","The producer visits an accredited agro-dealer and confirms with a one-time PIN (OTP). It works online or offline."],
+    ["Who gets paid, and when?","The supplier — not the farmer. Payment is raised immediately when the voucher is redeemed, via the payment gateway to the supplier's bank account."],
+    ["How does the system fight corruption?","Commodity vouchers (no cash), RICA verification, separation of duties (recommender ≠ approver), one active voucher per farmer per package, OTP proof of delivery, and a full audit trail."],
+    ["What are the access levels?","National, Provincial and District — each user sees only their own area. Suppliers and producers have their own portals."],
+    ["What is still a demonstration?","Real SMS/email delivery, the live payment gateway/BAS, and the RICA service are not connected yet — see 'About this demo'."],
+  ];
+    return `${crumb("FAQs")}<h2 class="page-h">Frequently Asked Questions</h2><p class="page-sub">Quick answers about how e-PSS works</p>`+qa.map(x=>`<div class="panel"><h3 style="margin:0 0 6px">${x[0]}</h3><div style="font-size:13.5px;color:var(--muted)">${x[1]}</div></div>`).join("");
+  },
+
+  /* dealer / fin */
+  ddash:()=>{const me='AgriMart Tshwane';const pays=(STATE.payments||[]).filter(p=>p.supplier===me);const red=(STATE.vouchers||[]).filter(v=>v.status==='Redeemed'&&v.dealer===me);const val=pays.reduce((s,x)=>s+x.amount,0);
+    return `${crumb("Agro-Dealer Dashboard")}<h2 class="page-h">${me} — Dashboard</h2><p class="page-sub">Your redemptions and payments (live data)</p>
+    <div class="cards">${card("Redemptions",red.length,"","#4aa3ff")}${card("Value redeemed",money(val),"","#26c281")}${card("Payments received",pays.length,"","#e3b341")}${card("Channel","Gateway","","#ff8a4a")}</div>
+    <div class="panel"><h3>Your redemptions</h3>${plain(['Voucher No.','Producer','Package','Value','Date','Status'],red.map(v=>[v.no,v.who,v.pkg,money(v.val),v.redeemed_at||'—',pill('Redeemed')]))||''}${red.length?'':'<p style="color:var(--muted);font-size:13px">No redemptions yet for this dealer.</p>'}</div>`;},
+  redeem:()=>`${crumb("Redeemed Inputs")}<h2 class="page-h">Redeemed Inputs</h2><div class="panel">${plain(['Voucher No.','Producer','Package','Value','Date','Status'],[['EV-2026-004471','Thabo Mokoena','Maize starter pack','R 3 200','12 May',pill('Redeemed')],['EV-2026-004476','Dineo Phiri','Tomato seedling pack','R 2 050','14 May',pill('Redeemed')]])}</div>`,
+  inv:()=>`${crumb("Invoices")}<h2 class="page-h">Invoices</h2><button class="btn" style="margin-bottom:14px" onclick="toast('Prototype: invoice generated from redeemed vouchers')">+ Generate invoice</button>
+    <div class="panel">${plain(['Invoice','Date','Amount','Linked to','Status'],[['INV-0098','13 May','R 7 300','2 vouchers',pill('Pending')],['INV-0097','30 Apr','R 18 450','6 vouchers',pill('Approved').replace('Approved','Paid')]])}</div>`,
+  dcat:()=>`${crumb("Approved Inputs")}<h2 class="page-h">Approved Inputs</h2><div class="panel">${plain(['Input','Category','Price','Status'],STATE.catalogue.map(i=>[i.n,i.c,money(i.p),pill(i.s)]))}</div>`,
+  fdash:()=>`${crumb("FI Dashboard")}<h2 class="page-h">Clearing &amp; Payments</h2><div class="cards">${card("Deposits to clear","12","R 9 400")}${card("Cleared today","48","")}${card("Payments queued","7","R 31 600")}${card("Settled this month","R 142 800","")}</div>
+    <div class="panel"><h3>Pending deposit clearing</h3>${plain(['Producer','Reference','Amount','Status'],[['Pieter van Wyk','DEP-7741','R 500',pill('Pending')],['Maria Adams','DEP-7742','R 400',pill('Pending')]])}</div>`,
+  clearing:()=>`${crumb("Deposit Clearing")}<h2 class="page-h">Deposit Clearing</h2><div class="panel">${plain(['Producer','Reference','Amount','Status'],[['Pieter van Wyk','DEP-7741','R 500',pill('Pending')],['Thabo Mokoena','DEP-7740','R 300',pill('Active').replace('Active','Cleared')]])}</div>`,
+  fpay:()=>`${crumb("Payments")}<h2 class="page-h">Agro-Dealer Payments</h2><div class="panel">${plain(['Invoice','Dealer','Amount','Status'],[['INV-0098','AgriMart Tshwane','R 7 300',pill('Pending')],['INV-0097','AgriMart Tshwane','R 18 450',pill('Approved').replace('Approved','Paid')]])}</div>`,
+};
+function plain(head,rows){return `<table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>"<tr>"+r.map(c=>`<td>${c}</td>`).join("")+"</tr>").join("")}</tbody></table>`;}
+function isExpired(v){return v.expiry&&v.status==='Issued'&&new Date()>new Date(v.expiry+'T23:59:59');}
+function voucherTable(V){return `<table><thead><tr><th>Voucher No.</th><th>Producer</th><th>Package (commodity)</th><th>Value</th><th>Valid until</th><th>Status</th></tr></thead><tbody>${V.map(v=>`<tr><td>${v.no}</td><td>${v.who}</td><td>${v.pkg}</td><td>${money(v.val)}</td><td>${fmtDate(v.expiry)}</td><td>${pill(isExpired(v)?'Expired':v.status)}</td></tr>`).join("")}</tbody></table>`;}
+
+/* ----- export builders ----- */
+function buildBenefLines(){return scopedProducers().map((p,i)=>`${i+1}. ${p.name}  |  ${PROV[p.prov]}  |  ${p.ent}  |  ${p.status}  |  RICA: ${p.rica}`);}
+function buildMandeLines(){const P=scopedProducers();const f=P.filter(p=>p.demo[0]==='F').length;const youth=P.filter(p=>+p.demo.split('·')[1]<=35).length;return [`Total producers in scope: ${P.length}`,`Female: ${f}    Male: ${P.length-f}`,`Youth (<=35): ${youth}`,`Provinces covered: ${[...new Set(P.map(p=>PROV[p.prov]))].join(', ')}`];}
+function exportMandeCsv(){exportCsv('MandE_data',['Name','Province','Enterprise','Gender-Age','Status'],scopedProducers().map(p=>[p.name,PROV[p.prov],p.ent,p.demo,p.status]));}
+function stdPdf(k,title){const m={prov:()=>Object.keys(PROV).map(c=>`${PROV[c]}: ${STATE.producers.filter(p=>p.prov===c).length} producers`),vou:()=>STATE.vouchers.map(v=>`${v.no}  ${v.who}  ${v.pkg}  ${money(v.val)}  ${v.status}`),ben:buildBenefLines,mande:buildMandeLines};exportPdf(title,(m[k]||(()=>['No data']))());}
+function stdCsv(k){if(k==='ben')exportCsv('beneficiaries',['Name','Province','District','Enterprise','Status','RICA'],STATE.producers.map(p=>[p.name,PROV[p.prov],p.dist,p.ent,p.status,p.rica]));else if(k==='vou')exportCsv('vouchers',['No','Producer','Package','Value','Status'],STATE.vouchers.map(v=>[v.no,v.who,v.pkg,v.val,v.status]));else if(k==='prov')exportCsv('by_province',['Province','Producers'],Object.keys(PROV).map(c=>[PROV[c],STATE.producers.filter(p=>p.prov===c).length]));else exportMandeCsv();}
+function adhoc(){const on=$('r_on').value,fmt=$('r_fmt').value;if(fmt[0]==='P')exportPdf(on+' report',(on==='Vouchers'?STATE.vouchers.map(v=>`${v.no}  ${v.who}  ${money(v.val)}  ${v.status}`):buildBenefLines()));else (on==='Vouchers'?stdCsv('vou'):stdCsv('ben'));}
+
+/* ================= CONTROL ================= */
+/* ============ LIVE DATA LAYER (talks to the real database server) ============ */
+const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
+const ROLE_LABEL={national:"National Superuser",provincial:"Provincial Admin",district:"District Officer",extension:"Extension Officer",finance:"Finance / Payments",auditor:"Auditor (read-only)",dealer:"Agro-Dealer"};
+const ROLE_LEVEL={national:"National",provincial:"Provincial",district:"District",extension:"District",finance:"National",auditor:"National",dealer:"Dealer"};
+const LABEL2TOKEN={"National Superuser":"national","Provincial Admin":"provincial","District Officer":"district","Extension Officer":"extension","Auditor (read-only)":"auditor"};
+async function loadAll(){
+  const [producers,vouchers,packages,catalogue,dealers,users,grievances,audit,messages,applications,payments,feedback,register]=await Promise.all([
+    api('/producers'),api('/vouchers'),api('/packages'),api('/catalogue'),api('/dealers'),api('/users'),api('/grievances'),api('/audit'),api('/messages'),api('/applications'),api('/payments'),api('/feedback'),api('/integrations/farmer-register')]);
+  STATE.producers=producers;
+  STATE.vouchers=vouchers;
+  STATE.packages=packages;
+  STATE.catalogue=catalogue;
+  STATE.dealers=dealers.map(d=>({id:d.id,n:d.name,prov:d.prov,dist:d.dist,c:d.contact,s:d.status,company_reg:d.company_reg,vat:d.vat,csd:d.csd,bank:d.bank,address:d.address,email:d.email,phone:d.phone,catalogue:d.catalogue}));
+  STATE.users=users.map(u=>({id:u.id,n:u.name,r:ROLE_LABEL[u.role]||u.role,lvl:ROLE_LEVEL[u.role]||'—',sc:PROV[u.scope]||u.scope||'All provinces',s:'Active'}));
+  STATE.grievances=grievances;
+  STATE.audit=audit.map(a=>({t:a.ts,a:a.actor,e:a.event,k:a.kind,c:a.kind}));
+  STATE.messages=messages;
+  STATE.applications=applications;
+  STATE.payments=payments;
+  STATE.feedback=feedback;
+  STATE.register=register;
+}
+async function reload(){ await loadAll(); renderView(); }
+function openAddGrievance(){modal("Log grievance",`<div class="field"><label>Producer</label><input id="g_who" placeholder="Producer name"></div><div class="field"><label>Issue</label><input id="g_issue" placeholder="Describe the problem"></div>`,"Save",async()=>{const issue=$('g_issue').value.trim();if(!issue){toast('Describe the issue');return;}const r=await api('/grievances','POST',{who:$('g_who').value,issue});closeModal();await reload();toast('📣 Logged: '+r.ref);});}
+async function resolveGrievance(id){await api('/grievances/'+id+'/resolve','POST');await reload();toast('✔ Resolved');}
+/* ---- targeted distribution + communications ---- */
+function val(id){const e=document.getElementById(id);return e?e.value:'';}
+function distCrit(){return {gender:val('t_gender'),youth:document.getElementById('t_youth')&&document.getElementById('t_youth').checked,prov:val('t_prov')||(STATE.scopeKind==='prov'?STATE.scope:''),dist:STATE.scopeKind==='dist'?STATE.scope:''};}
+function previewDist(){const list=matchClient(distCrit());const pv=document.getElementById('distPreview');if(pv)pv.innerHTML=`<b>${list.length}</b> beneficiaries match — each will receive the selected package.`;const dl=document.getElementById('distList');if(dl)dl.innerHTML=list.length?plain(['Name','Province','District','Gender·Age'],list.slice(0,50).map(p=>[p.name,PROV[p.prov]||p.prov,p.dist,p.demo])):'<span style="color:var(--muted)">No matches.</span>';}
+async function distributeNow(){const q=distCrit();q.pkg=val('t_pkg');const n=matchClient(q).length;if(!n)return toast('No beneficiaries match those criteria');if(!confirm('Issue "'+q.pkg+'" to '+n+' beneficiaries automatically?'))return;const r=await api('/distribute','POST',q);await reload();toast('🎯 Distributed to '+r.count+' beneficiaries — vouchers issued & logged');}
+function audCrit(){const a=val('c_aud');const q={};if(a==='F')q.gender='F';else if(a==='youth')q.youth=true;else if(a&&a.indexOf('prov:')===0)q.prov=a.slice(5);if(STATE.scopeKind==='prov')q.prov=STATE.scope;if(STATE.scopeKind==='dist')q.dist=STATE.scope;return q;}
+function previewComms(){const n=matchClient(audCrit()).length;const pv=document.getElementById('commsPreview');if(pv)pv.innerHTML=`<b>${n}</b> recipients.`;}
+async function sendComms(){const q=audCrit();q.channel=val('c_chan');q.subject=val('c_subj');q.body=val('c_body');const sel=document.getElementById('c_aud');q.audience=sel?sel.selectedOptions[0].text:'All';const n=matchClient(q).length;if(!n)return toast('No recipients match');if(!q.subject)return toast('Enter a subject');const r=await api('/messages','POST',q);await reload();toast('✉️ '+r.count+' '+q.channel+'(s) sent to beneficiaries');}
+/* ---- redemption (triggers immediate supplier payment) + applications ---- */
+async function doRedeem(id,no){const otp=prompt('Enter the OTP for voucher '+no+' (shown in the table for this demo):');if(otp===null)return;const dealer=STATE.role==='dealer'?'AgriMart Tshwane':(document.getElementById('redeemDealer')||{}).value;const r=await api('/vouchers/'+id+'/redeem','POST',{otp,dealer});if(r.error)return toast('❌ '+r.error);await reload();toast('✅ '+no+' redeemed — R'+r.paid+' paid to supplier instantly ('+r.ref+')');}
+async function applyNow(){const name=(val('a_name')||'').trim();if(!name)return toast('Enter a name');await api('/applications','POST',{name,prov:val('a_prov'),dist:val('a_dist'),ent:val('a_ent'),demo:val('a_demo')});await reload();toast('📝 Application submitted');}
+function meLabel(){return STATE.me?STATE.me.name:((NAV[STATE.role]&&NAV[STATE.role].label)||'Official');}
+function appActions(a){
+  if(a.status==='Applied'){
+    if(STATE.role==='gov_dist') return `<button class="btn sm" onclick="recommendApp(${a.id})">Recommend</button> <button class="btn sm danger" onclick="rejectApp(${a.id})">Reject</button>`;
+    return `<span style="color:var(--muted);font-size:11px">awaiting district recommendation</span> <button class="btn sm danger" onclick="rejectApp(${a.id})">Reject</button>`;
+  }
+  if(a.status==='Recommended'){
+    if(STATE.role==='gov_dist') return `<span style="color:var(--muted);font-size:11px">recommended — awaiting approval</span>`;
+    return `<button class="btn sm" onclick="approveApp(${a.id})">Approve</button> <button class="btn sm danger" onclick="rejectApp(${a.id})">Reject</button>`;
+  }
+  return '';
+}
+async function recommendApp(id){await api('/applications/'+id+'/recommend','POST',{by:meLabel()});await reload();toast('✔ Recommended — sent for approval');}
+async function approveApp(id){if(!confirm('Approve this application and add the farmer to the register?'))return;const r=await api('/applications/'+id+'/approve','POST',{by:meLabel()});if(r.error)return toast('❌ '+r.error);await reload();toast('✅ Approved & added to register');}
+async function rejectApp(id){const reason=prompt('Reason for rejection (recorded for audit):');if(reason===null)return;await api('/applications/'+id+'/reject','POST',{by:meLabel(),reason});await reload();toast('Application rejected');}
+/* ---- supplier / agro-dealer registration ---- */
+function showAddDealer(){const provOpts=Object.entries(PROV).map(([k,v])=>`<option value="${k}" ${(k===STATE.scope&&STATE.scopeKind==='prov')?'selected':''}>${v}</option>`).join("");
+  modal("Register supplier / agro-dealer",`
+    <div class="row"><div class="field"><label>Trading / company name</label><input id="d_name" placeholder="e.g. GreenFields Agri"></div><div class="field"><label>Contact person</label><input id="d_contact" placeholder="Full name"></div></div>
+    <div class="row"><div class="field"><label>Company registration no.</label><input id="d_reg" placeholder="e.g. 2019/123456/07"></div><div class="field"><label>VAT number</label><input id="d_vat" placeholder="e.g. 4xxxxxxxxx"></div></div>
+    <div class="row"><div class="field"><label>CSD number</label><input id="d_csd" placeholder="MAAA..."></div><div class="field"><label>Email</label><input id="d_email"></div><div class="field"><label>Phone</label><input id="d_phone"></div></div>
+    <div class="row"><div class="field"><label>Province</label><select id="d_prov" onchange="fillDist('d_prov','d_dist')">${provOpts}</select></div><div class="field"><label>District</label><select id="d_dist">${distOptions((STATE.scopeKind==='prov'&&STATE.scope)?STATE.scope:Object.keys(PROV)[0])}</select></div></div>
+    <div class="field"><label>Physical address</label><input id="d_addr" placeholder="Street, town"></div>
+    <div class="field"><label>Banking details</label><input id="d_bank" placeholder="Bank · account number · branch"></div>
+    <div class="field"><label>Product catalogue (what they stock)</label><input id="d_cat" placeholder="e.g. seed, fertiliser, feed, equipment"></div>
+    <div class="note">New dealers are saved as <b>Pending</b> until an official accredits them.</div>`,
+    "Register dealer",async()=>{const name=$('d_name').value.trim();if(!name){toast('Enter a name');return;}
+      await api('/dealers','POST',{name,contact:$('d_contact').value,company_reg:$('d_reg').value,vat:$('d_vat').value,csd:$('d_csd').value,email:$('d_email').value,phone:$('d_phone').value,prov:$('d_prov').value,dist:$('d_dist').value,address:$('d_addr').value,bank:$('d_bank').value,catalogue:$('d_cat').value});
+      closeModal();await reload();toast('🏪 Dealer registered (pending accreditation)');});
+}
+function viewDealer(id){const d=STATE.dealers.find(x=>x.id===id);if(!d)return;
+  const row=(k,v)=>`<div style="display:flex;padding:6px 0;border-bottom:1px solid var(--line)"><div style="width:160px;color:var(--muted);font-size:13px">${k}</div><div style="flex:1;font-size:13px">${v||'—'}</div></div>`;
+  modal(d.n+' — supplier profile',
+    row('Status',pill(d.s))+row('Contact person',d.c)+row('Company reg. no.',d.company_reg)+row('VAT number',d.vat)+row('CSD number',d.csd)+row('Email',d.email)+row('Phone',d.phone)+row('Province',PROV[d.prov]||d.prov)+row('District',d.dist)+row('Physical address',d.address)+row('Banking details',d.bank)+row('Product catalogue',d.catalogue),
+    d.s==='Pending'?'Accredit dealer':'Close',
+    d.s==='Pending'?(async()=>{await api('/dealers/'+id+'/approve','POST');closeModal();await reload();toast('✅ Dealer accredited');}):closeModal);
+}
+async function approveDealer(id){await api('/dealers/'+id+'/approve','POST');await reload();toast('✅ Dealer accredited & activated');}
+async function delDealer(id){if(!confirm('Remove this dealer?'))return;await api('/dealers/'+id,'DELETE');await reload();toast('🗑 Dealer removed');}
+
+/* ================= CONTROL ================= */
+async function enter(r){
+  $("landing").classList.add("hidden");
+  if(r==='producer'){$("login").classList.add("hidden");$("phoneApp").classList.remove("hidden");startProducerApp();return;}
+  STATE.role=r;STATE.filter='';const me=STATE.me;
+  if(r==='gov_prov'){STATE.scopeKind='prov';STATE.scope=(me&&me.role==='provincial'&&me.scope)?me.scope:'KZN';}
+  else if(r==='gov_dist'){STATE.scopeKind='dist';STATE.scope=(me&&me.role==='district'&&me.scope)?me.scope:'uMzinyathi';}
+  else {STATE.scopeKind=null;STATE.scope=null;}
+  $("login").classList.add("hidden");$("shell").classList.remove("hidden");
+  const cfg=NAV[r];
+  const isNat=me&&(me.role==='national'||me.role==='finance'||me.role==='auditor');
+  const ps=$("portalSel"); if(ps){ps.value=r; ps.style.display=isNat?'':'none';}
+  const wb=$("whoBox"); if(wb) wb.innerHTML=me?`👤 ${me.name}<br><small style="opacity:.9"><span style="color:#ffe08a;font-weight:600">${me.username}</span></small>`:'';
+  STATE.cfg=cfg; renderNav();
+  $("view").innerHTML='<p style="color:var(--muted)">Loading…</p>';
+  await loadAll();
+  renderScopeSel();
+  STATE.view=cfg.items[0][0];renderView();setActive(STATE.view);
+}
+function navLink(it){return `<a data-v="${it[0]}" onclick="go('${it[0]}')" title="${it[2]}"><span class="ico">${it[1]}</span><span class="lbl">${it[2]}</span></a>`;}
+function renderNav(){const items=STATE.cfg.items;const main=items.slice(0,7),others=items.slice(7);
+  let h=`<div class="grp lblonly">Menu</div>`+main.map(navLink).join('');
+  if(others.length){h+=`<div class="grp others-h" onclick="toggleOthers()"><span>OTHERS</span><span id="othersCaret">▸</span></div><div class="others" id="othersBox" style="display:none">`+others.map(navLink).join('')+`</div>`;}
+  $("nav").innerHTML=h; setActive(STATE.view);}
+function setActive(v){document.querySelectorAll('.side a').forEach(a=>a.classList.toggle('active',a.getAttribute('data-v')===v));}
+function toggleOthers(){const b=$('othersBox');if(!b)return;const open=b.style.display!=='none';b.style.display=open?'none':'block';const c=$('othersCaret');if(c)c.textContent=open?'▸':'▾';}
+function toggleSide(){document.body.classList.toggle('side-collapsed');}
+function renderScopeSel(){const s=$("scopeSel");if(!s)return;const isNat=STATE.me&&(STATE.me.role==='national'||STATE.me.role==='finance'||STATE.me.role==='auditor');
+  if(isNat&&STATE.scopeKind==='prov'){s.classList.remove('hidden');s.innerHTML=Object.entries(PROV).map(([k,v])=>`<option value="${k}" ${k===STATE.scope?'selected':''}>📍 ${v}</option>`).join("");}
+  else if(isNat&&STATE.scopeKind==='dist'){s.classList.remove('hidden');let dists=[...new Set(STATE.producers.map(p=>p.dist).filter(Boolean))].sort();if(STATE.scope&&!dists.includes(STATE.scope))dists.unshift(STATE.scope);s.innerHTML=dists.map(d=>`<option value="${d}" ${d===STATE.scope?'selected':''}>📍 ${d} district</option>`).join("");}
+  else {s.classList.add('hidden');s.innerHTML='';}}
+function setScope(v){STATE.scope=v;STATE.filter='';renderView();}
+function go(v){STATE.view=v;STATE.filter='';STATE.filterProv='';setActive(v);renderView();}
+function renderView(){$("view").innerHTML=(VIEWS[STATE.view]||(()=>"<p>Coming soon</p>"))();$("view").scrollTop=0;}
+function showLogin(){$("landing").classList.add("hidden");$("login").classList.remove("hidden");}
+/* ---- feedback / ratings popup ---- */
+function fbStars(n){let s='';for(let i=1;i<=5;i++)s+=`<span onclick="setStars(${i})" style="cursor:pointer">${i<=n?'★':'☆'}</span>`;return s;}
+function setStars(n){window._fb=n;const el=$('fbStars');if(el)el.innerHTML=fbStars(n);}
+function showFeedback(){
+  if(document.querySelector('.ovl'))return false; // don't stack on another dialog
+  window._fb=0;
+  const roles=['National officer','Provincial officer','District officer','Extension officer','Agro-dealer / supplier','Producer / farmer','Other'];
+  const mine=STATE.me?({national:'National officer',provincial:'Provincial officer',district:'District officer',dealer:'Agro-dealer / supplier',finance:'National officer',auditor:'National officer'}[STATE.me.role]||'Other'):'Other';
+  const opts=roles.map(r=>`<option ${r===mine?'selected':''}>${r}</option>`).join('');
+  modal("⭐ Your feedback on e-PSS",`
+    <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Please rate how useful the system is to you:</p>
+    <div id="fbStars" style="font-size:32px;letter-spacing:6px;color:var(--gold)">${fbStars(0)}</div>
+    <div class="field" style="margin-top:14px"><label>Your role (who is rating)</label><select id="fb_role">${opts}</select></div>
+    <div class="field"><label>What is most useful, or what should improve?</label><input id="fb_comment" placeholder="Optional comment"></div>`,
+    "Submit feedback", submitFeedback);
+  return true;
+}
+async function submitFeedback(){
+  if(!window._fb){toast('Please tap a star rating first');return;}
+  await api('/feedback','POST',{rating:window._fb,role:$('fb_role').value,comment:$('fb_comment').value,by:meLabel()});
+  closeModal(); if(STATE.me) await reload(); toast('🙏 Thank you for your feedback!');
+}
+/* ---- integrations (simulated external systems) ---- */
+async function testIntegration(key){let r,txt='error';
+  try{
+    if(key==='farmer-register'){const a=await api('/integrations/farmer-register');txt=a.length+' farmers in the register';}
+    else if(key==='dss'){r=await api('/integrations/dss?prov=KZN');txt='KZN risk: '+r.risk+' · '+r.advisory;}
+    else if(key==='rica'){r=await api('/integrations/rica?name=Nomsa%20Dlamini');txt='Nomsa Dlamini → '+(r.verified?'verified':'mismatch');}
+    else if(key==='extension-directory'){const a=await api('/integrations/extension-directory');txt=a.length+' officers: '+a.map(o=>o.name).join(', ');}
+    else if(key==='sms'){r=await api('/integrations/sms','POST',{to:'0820000000'});txt='SMS sent · '+r.ref;}
+    else if(key==='bas'){r=await api('/integrations/bas','POST',{amount:3200});txt=r.status+' · '+r.ref;}
+    else if(key==='gateway'){r=await api('/integrations/gateway','POST',{amount:3200});txt=r.status+' · '+r.ref;}
+  }catch(e){}
+  const el=document.getElementById('int_'+key); if(el) el.textContent=txt;
+  toast('✅ '+key+' responded');
+}
+async function syncRegister(){const r=await api('/integrations/farmer-register/sync','POST');await reload();toast('⟳ Synced '+r.synced+' new farmer(s) from the Register');}
+async function doLogin(){
+  const r=await api('/login','POST',{username:($('u').value||'').trim(),password:($('pw').value||'').trim()});
+  if(r.error){const e=$('loginErr');e.textContent=r.error;e.style.display='block';return;}
+  $('loginErr').style.display='none'; STATE.me=r;
+  const portal={national:'gov',finance:'gov',auditor:'gov',provincial:'gov_prov',district:'gov_dist',dealer:'dealer'}[r.role]||'gov';
+  enter(portal);
+}
+function openProfile(id){STATE.selected=id;STATE.view='profile';renderView();}
+function logout(){STATE.me=null;["shell","phoneApp","login"].forEach(i=>$(i).classList.add("hidden"));$("landing").classList.remove("hidden");}
+
+/* ================= PHONE ================= */
+async function startProducerApp(){
+  try{const [vs,dl]=await Promise.all([api('/vouchers'),api('/dealers')]);STATE.vouchers=vs;STATE.dealers=dl.map(d=>({n:d.name,s:d.status}));}catch(e){}
+  window._pv=(STATE.vouchers||[]).find(v=>v.status==='Issued')||null;
+  phoneStep(0);
+}
+function phoneStep(i){
+  const v=window._pv;
+  if(!v){ $("pscreen").innerHTML=`<div class="pbar">📱 My Vouchers</div><div class="pbody"><p style="font-size:13px;color:#5e6b5e">You have no active voucher right now. When the government issues you one, it will appear here.</p><button class="btn alt" style="width:100%" onclick="logout()">← Back</button></div>`; return; }
+  const dealers=(STATE.dealers||[]).filter(d=>d.s==='Active');
+  const screens=[
+    `<div class="pbar">📱 My Vouchers</div><div class="pbody"><div class="voucher"><div class="vn">Active voucher · ${v.who}</div><div class="vv">${v.no}</div><div style="margin-top:6px;font-size:13px">${v.pkg} · <b>${money(v.val)}</b></div></div><p style="font-size:13px;color:#5e6b5e">Take this voucher to an accredited agro-dealer to redeem your inputs.</p><button class="btn" style="width:100%" onclick="phoneStep(1)">Redeem now →</button><p style="font-size:12px;color:#5e6b5e;margin-top:14px">📨 Advisory: ☀️ Dry spell expected next week — plan irrigation.</p></div><div class="tabbar"><div class="on">🎟️ Vouchers</div><div>📨 Messages</div><div>👤 Profile</div></div>`,
+    `<div class="pbar">✅ Redeem Voucher</div><div class="pbody"><div class="field"><label>Accredited agro-dealer</label><select id="pv_dealer">${dealers.map(d=>`<option>${d.n}</option>`).join('')||'<option>(no accredited dealer)</option>'}</select></div><div class="field"><label>Package</label><input value="${v.pkg}" disabled></div><div class="note" style="margin-bottom:14px">An OTP will be sent to your RICA-registered number to confirm it's really you.</div><button class="btn" style="width:100%" onclick="phoneStep(2)">Send OTP →</button><button class="btn alt" style="width:100%;margin-top:8px" onclick="phoneStep(0)">Cancel</button></div>`,
+    `<div class="pbar">🔐 Enter OTP</div><div class="pbody"><p style="font-size:13px;color:#5e6b5e">We sent a 4-digit code to your phone (demo shows it: <b>${v.otp}</b>)</p><div class="otp"><input maxlength="1" value="${v.otp[0]}"><input maxlength="1" value="${v.otp[1]}"><input maxlength="1" value="${v.otp[2]}"><input maxlength="1" value="${v.otp[3]}"></div><p style="font-size:12px;color:#5e6b5e;text-align:center">Works offline too — syncs once back online.</p><button class="btn" style="width:100%" onclick="phoneRedeem()">Confirm redemption →</button></div>`,
+    `<div class="pbar">🎉 Redeemed</div><div class="pbody" style="text-align:center"><div style="font-size:54px;margin:10px 0">✅</div><h3 style="margin:0">Redemption successful</h3><p style="font-size:13px;color:#5e6b5e">Voucher <b>${v.no}</b> redeemed for <b>${money(v.val)}</b>. The supplier is paid immediately — and this shows in the government system.</p><div class="voucher" style="text-align:left"><div class="vn">Proof of redemption</div><div class="vv" style="font-size:14px">${v.no}</div><div style="font-size:12px;margin-top:4px">OTP verified · linked to e-PSS</div></div><button class="btn" style="width:100%" onclick="logout()">Done</button></div>`
+  ];
+  $("pscreen").innerHTML=screens[i];
+}
+async function phoneRedeem(){
+  const v=window._pv; const dealer=(document.getElementById('pv_dealer')||{}).value||'AgriMart Tshwane';
+  const r=await api('/vouchers/'+v.id+'/redeem','POST',{otp:v.otp,dealer});
+  if(r.error){toast('❌ '+r.error);return;}
+  phoneStep(3);
+}
+
+/* ================= INIT ================= */
+buildThemeUI();let sv='agri';try{sv=localStorage.getItem('evTheme')||'agri'}catch(e){}setTheme(sv);
+function updateClock(){const c=$('clock');if(!c)return;const d=new Date();c.textContent=d.toLocaleDateString('en-ZA',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+updateClock();setInterval(updateClock,1000);
+let _fbShown=0;setInterval(()=>{ if(STATE.me && _fbShown<3){ if(showFeedback()) _fbShown++; } }, 900000); // feedback box up to 3x per session, every 15 min
+</script>
+</body>
+</html>

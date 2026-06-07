@@ -1,0 +1,4 @@
+bin/
+obj/
+evoucher.db
+*.user
