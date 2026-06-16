@@ -12,6 +12,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDb>(o => o.UseSqlite("Data Source=evoucher.db"));
 var app = builder.Build();
 
+// security headers (production hardening)
+app.Use(async (ctx, next) => {
+    var h = ctx.Response.Headers;
+    h["X-Content-Type-Options"] = "nosniff";
+    h["X-Frame-Options"] = "DENY";
+    h["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    h["Content-Security-Policy"] = "frame-ancestors 'none'";
+    h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    await next();
+});
+
 app.UseDefaultFiles();   // serve wwwroot/index.html at "/"
 app.UseStaticFiles();
 
@@ -30,6 +42,8 @@ static void Log(AppDb db, string actor, string evt, string kind)   // tamper-evi
     var hash = Sha256($"{prev}|{ts}|{actor}|{evt}|{kind}");
     db.Audit.Add(new Audit { Ts = ts, Actor = actor, Event = evt, Kind = kind, PrevHash = prev, Hash = hash });
 }
+static string HashPw(string pw) { var salt = RandomNumberGenerator.GetBytes(16); var h = Rfc2898DeriveBytes.Pbkdf2(pw ?? "", salt, 100000, HashAlgorithmName.SHA256, 32); return Convert.ToHexString(salt) + ":" + Convert.ToHexString(h); }
+static bool CheckPw(string pw, string stored) { if (string.IsNullOrEmpty(stored)) return false; if (!stored.Contains(':')) return pw == stored; var parts = stored.Split(':'); try { var salt = Convert.FromHexString(parts[0]); var h = Rfc2898DeriveBytes.Pbkdf2(pw ?? "", salt, 100000, HashAlgorithmName.SHA256, 32); return Convert.ToHexString(h) == parts[1]; } catch { return false; } }
 static List<Producer> Match(AppDb db, Criteria c)
 {
     var list = db.Producers.Where(p => p.Status == "Active").ToList();
@@ -47,6 +61,9 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDb>();
     db.Database.EnsureCreated();
     if (!db.Producers.Any()) Seed.Run(db);
+    // hash any plain-text passwords (one-time migration; safe to run every start)
+    foreach (var usr in db.Users.ToList().Where(x => x.Password != null && !x.Password.Contains(':'))) usr.Password = HashPw(usr.Password);
+    db.SaveChanges();
 }
 
 // ============================ API ENDPOINTS ==================================
@@ -54,8 +71,18 @@ using (var scope = app.Services.CreateScope())
 // ---- auth ----
 app.MapPost("/api/login", (AppDb db, LoginReq r) =>
 {
-    var u = db.Users.FirstOrDefault(x => x.Username == (r.username ?? "").Trim() && x.Password == (r.password ?? "").Trim());
-    if (u is null) return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
+    var un = (r.username ?? "").Trim(); var pw = (r.password ?? "").Trim();
+    var u = db.Users.FirstOrDefault(x => x.Username == un);
+    var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    if (u != null && u.LockedUntil > nowMs)
+        return Results.Json(new { error = "Account locked after too many attempts. Try again later." }, statusCode: 423);
+    if (u is null || !CheckPw(pw, u.Password))
+    {
+        if (u != null) { u.FailedAttempts++; if (u.FailedAttempts >= 5) u.LockedUntil = nowMs + 15 * 60000; db.SaveChanges(); }
+        return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
+    }
+    u.FailedAttempts = 0; u.LockedUntil = 0; db.SaveChanges();
+    Log(db, u.Name, "Signed in", "info"); db.SaveChanges();
     return Results.Ok(new { username = u.Username, name = u.Name, role = u.Role, scope = u.Scope });
 });
 
@@ -257,7 +284,7 @@ public class Producer { public int Id { get; set; } public string Name { get; se
 public class Package { public int Id { get; set; } public string Name { get; set; } = ""; public int Val { get; set; } public string Items { get; set; } = ""; public string Status { get; set; } = "Active"; }
 public class Voucher { public int Id { get; set; } public string No { get; set; } = ""; public string Who { get; set; } = ""; public string Prov { get; set; } = ""; public string Pkg { get; set; } = ""; public int Val { get; set; } public string Status { get; set; } = ""; public string Otp { get; set; } = ""; public string Dealer { get; set; } = ""; public string Created { get; set; } = ""; [JsonPropertyName("redeemed_at")] public string RedeemedAt { get; set; } = ""; public string Expiry { get; set; } = ""; [JsonPropertyName("confirm_code")] public string ConfirmCode { get; set; } = ""; [JsonPropertyName("confirmed_at")] public string ConfirmedAt { get; set; } = ""; [JsonPropertyName("confirm_status")] public string ConfirmStatus { get; set; } = ""; }
 public class Dealer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Contact { get; set; } = ""; public string Status { get; set; } = "Active"; [JsonPropertyName("company_reg")] public string CompanyReg { get; set; } = ""; public string Vat { get; set; } = ""; public string Csd { get; set; } = ""; public string Bank { get; set; } = ""; public string Address { get; set; } = ""; public string Email { get; set; } = ""; public string Phone { get; set; } = ""; public string Catalogue { get; set; } = ""; }
-public class User { public int Id { get; set; } public string Username { get; set; } = ""; public string Password { get; set; } = ""; public string Name { get; set; } = ""; public string Role { get; set; } = ""; public string Scope { get; set; } = ""; }
+public class User { public int Id { get; set; } public string Username { get; set; } = ""; public string Password { get; set; } = ""; public string Name { get; set; } = ""; public string Role { get; set; } = ""; public string Scope { get; set; } = ""; [JsonIgnore] public int FailedAttempts { get; set; } [JsonIgnore] public long LockedUntil { get; set; } }
 public class Grievance { public int Id { get; set; } public string Ref { get; set; } = ""; public string Who { get; set; } = ""; public string Issue { get; set; } = ""; public string Status { get; set; } = "Open"; public string Created { get; set; } = ""; }
 public class Catalogue { public int Id { get; set; } public string N { get; set; } = ""; public string C { get; set; } = ""; public int P { get; set; } public string S { get; set; } = "Approved"; }
 public class Audit { public int Id { get; set; } public string Ts { get; set; } = ""; public string Actor { get; set; } = ""; public string Event { get; set; } = ""; public string Kind { get; set; } = ""; [JsonPropertyName("prev_hash")] public string PrevHash { get; set; } = ""; public string Hash { get; set; } = ""; }

@@ -95,7 +95,7 @@
   .tabbar{display:flex;border-top:1px solid #dfe5df}.tabbar div{flex:1;text-align:center;padding:10px;font-size:11px;color:#5e6b5e}.tabbar div.on{color:var(--green);font-weight:700}
   /* modal + toast */
   .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100}
-  .mcard{background:var(--card);color:var(--ink);border-radius:12px;padding:22px;width:440px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .mcard{background:color-mix(in srgb, var(--card) 88%, #64748b 12%);color:var(--ink);border-radius:12px;padding:22px;width:440px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
   .mcard h3{margin:0 0 14px}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:11px 18px;border-radius:24px;font-size:13px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;transition:.3s}
   .toast.show{opacity:1;bottom:34px}
@@ -469,15 +469,21 @@ async function removeUser(n){const u=STATE.users.find(x=>x.n===n);if(u&&confirm(
 
 /* ================= NAV ================= */
 const NAV={
-  gov:{label:"National Superuser",sub:"National",items:[["dash","📊","Dashboard"],["mande","📈","Monitoring & Evaluation"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries / Register"],["packages","🧩","Subsidy Packages"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["confirm","🤝","Farmer Confirmation"],["oversight","🛰️","Confirmation Tracker"],["payments","💳","Payments"],["comms","✉️","Communications"],["cat","📦","Input Catalogue"],["suppliers","🏪","Suppliers Directory"],["users","👥","Users & Access"],["controls","🛡️","Anti-Corruption Controls"],["reports","📑","Reports & Export"],["audit","🔒","Audit Trail"],["griev","📣","Grievances"],["coverage","🧭","Requirements Coverage"],["links","🔗","System Links"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["about","ℹ️","About this demo"]]},
-  gov_prov:{label:"Provincial Admin",sub:"KwaZulu-Natal",items:[["dash","📊","Dashboard"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["confirm","🤝","Farmer Confirmation"],["oversight","🛰️","Confirmation Tracker"],["payments","💳","Payments"],["comms","✉️","Communications"],["mande","📈","Monitoring & Evaluation"],["controls","🛡️","Anti-Corruption Controls"],["reports","📑","Reports & Export"],["audit","🔒","Audit Trail"],["griev","📣","Grievances"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["about","ℹ️","About this demo"]]},
-  gov_dist:{label:"District Officer",sub:"uMzinyathi District (KZN)",items:[["dash","📊","Dashboard"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["confirm","🤝","Farmer Confirmation"],["oversight","🛰️","Confirmation Tracker"],["payments","💳","Payments"],["comms","✉️","Communications"],["mande","📈","Monitoring & Evaluation"],["controls","🛡️","Anti-Corruption Controls"],["griev","📣","Grievances"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["about","ℹ️","About this demo"]]},
+  gov:{label:"National Superuser",sub:"National",items:[["dash","📊","Dashboard"],["mande","📈","Monitoring & Evaluation"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries / Register"],["packages","🧩","Subsidy Packages"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["confirm","🤝","Farmer Confirmation"],["oversight","🛰️","Confirmation Tracker"],["payments","💳","Payments"],["comms","✉️","Communications"],["cat","📦","Input Catalogue"],["suppliers","🏪","Suppliers Directory"],["users","👥","Users & Access"],["controls","🛡️","Anti-Corruption Controls"],["reports","📑","Reports & Export"],["audit","🔒","Audit Trail"],["griev","📣","Grievances"],["coverage","🧭","Requirements Coverage"],["links","🔗","System Links"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["accessibility","♿","Accessibility"],["about","ℹ️","About this demo"]]},
+  gov_prov:{label:"Provincial Admin",sub:"KwaZulu-Natal",items:[["dash","📊","Dashboard"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["confirm","🤝","Farmer Confirmation"],["oversight","🛰️","Confirmation Tracker"],["payments","💳","Payments"],["comms","✉️","Communications"],["mande","📈","Monitoring & Evaluation"],["controls","🛡️","Anti-Corruption Controls"],["reports","📑","Reports & Export"],["audit","🔒","Audit Trail"],["griev","📣","Grievances"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["accessibility","♿","Accessibility"],["about","ℹ️","About this demo"]]},
+  gov_dist:{label:"District Officer",sub:"uMzinyathi District (KZN)",items:[["dash","📊","Dashboard"],["applications","📝","Applications"],["benef","👨‍🌾","Beneficiaries"],["vouchers","🎟️","Voucher Issuance"],["distribute","🎯","Targeted Distribution"],["redemptions","✅","Redemptions"],["confirm","🤝","Farmer Confirmation"],["oversight","🛰️","Confirmation Tracker"],["payments","💳","Payments"],["comms","✉️","Communications"],["mande","📈","Monitoring & Evaluation"],["controls","🛡️","Anti-Corruption Controls"],["griev","📣","Grievances"],["integrations","🔌","Integrations"],["feedback","⭐","Ratings & Feedback"],["faqs","❓","FAQs"],["accessibility","♿","Accessibility"],["about","ℹ️","About this demo"]]},
   dealer:{label:"Agro-Dealer / Supplier",sub:"AgriMart Tshwane",items:[["ddash","📊","Dashboard"],["redemptions","✅","Redeem Vouchers"],["payments","💳","My Payments"],["inv","🧾","Invoices"],["dcat","📦","Approved Inputs"]]},
   fin:{label:"Financial Institution",sub:"Clearing Officer",items:[["fdash","📊","Dashboard"],["clearing","🏦","Deposit Clearing"],["fpay","💳","Payments"]]},
 };
 
 /* ================= VIEWS ================= */
 const VIEWS={
+  accessibility:()=>`${crumb("Accessibility")}<h2 class="page-h">Accessibility Statement</h2>
+    <div class="panel"><p>The e-PSS e-Voucher system aims to be usable by everyone, including people who rely on a keyboard or assistive technology. We are working towards <b>WCAG 2.1 level AA</b>.</p>
+    <h3 style="margin:14px 0 6px">What we do</h3><ul style="padding-left:20px;line-height:1.8"><li>Keyboard navigation with visible focus.</li><li>Meaningful labels, headings and table structure.</li><li>Text reflows and stays readable when the page is zoomed.</li><li>Colour themes chosen with contrast in mind.</li></ul>
+    <h3 style="margin:14px 0 6px">Known limitations</h3><ul style="padding-left:20px;line-height:1.8"><li>Some generated PDF/Excel exports may not yet be fully tagged.</li><li>The producer mobile-app view is a demo preview.</li></ul>
+    <h3 style="margin:14px 0 6px">Report a problem</h3><p>Email <b>epss-support@dalrrd.gov.za</b> with the page and the difficulty and we will help and fix it.</p>
+    <p style="color:var(--muted);font-size:12px;margin-top:12px">Statement prepared June 2026 — prototype; to be formalised before public launch.</p></div>`,
   confirm:()=>{ const V=scopedVouchers().filter(v=>v.status==='Redeemed');
     const rows=V.map(v=>{ const st=v.confirm_status||'';
       const badge = st==='Confirmed'?pill('Confirmed'):st==='Disputed'?pill('Disputed'):'<span class="pill" style="background:#fdeccb;color:#9a6207">Awaiting farmer</span>';
@@ -877,6 +883,10 @@ async function loadAll(){
   STATE.register=register;
 }
 async function reload(){ await loadAll(); renderView(); }
+/* auto-logout after 10 minutes of inactivity (production hardening) */
+let _idleT=null,_lastAct=0;
+function resetIdle(){ if(!STATE.me) return; const t=Date.now(); if(t-_lastAct<3000) return; _lastAct=t; clearTimeout(_idleT); _idleT=setTimeout(()=>{ if(STATE.me){ logout(); toast('🔒 Signed out after 10 minutes of inactivity'); } },600000); }
+['mousemove','keydown','click','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,resetIdle,{passive:true}));
 function openAddGrievance(){modal("Log grievance",`<div class="field"><label>Producer</label><input id="g_who" placeholder="Producer name"></div><div class="field"><label>Issue</label><input id="g_issue" placeholder="Describe the problem"></div>`,"Save",async()=>{const issue=$('g_issue').value.trim();if(!issue){toast('Describe the issue');return;}const r=await api('/grievances','POST',{who:$('g_who').value,issue});closeModal();await reload();toast('📣 Logged: '+r.ref);});}
 async function resolveGrievance(id){await api('/grievances/'+id+'/resolve','POST');await reload();toast('✔ Resolved');}
 /* ---- targeted distribution + communications ---- */
@@ -977,10 +987,10 @@ function showFeedback(){
   const mine=STATE.me?({national:'National officer',provincial:'Provincial officer',district:'District officer',dealer:'Agro-dealer / supplier',finance:'National officer',auditor:'National officer'}[STATE.me.role]||'Other'):'Other';
   const opts=roles.map(r=>`<option ${r===mine?'selected':''}>${r}</option>`).join('');
   modal("⭐ Your feedback on e-PSS",`
-    <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Please rate how useful the system is to you:</p>
+    <div class="field"><label>What is your role?</label><select id="fb_role">${opts}</select></div>
+    <p style="font-size:13px;color:var(--muted);margin:8px 0 8px">Please rate how useful the system is to you:</p>
     <div id="fbStars" style="font-size:32px;letter-spacing:6px;color:var(--gold)">${fbStars(0)}</div>
-    <div class="field" style="margin-top:14px"><label>Your role (who is rating)</label><select id="fb_role">${opts}</select></div>
-    <div class="field"><label>What is most useful, or what should improve?</label><input id="fb_comment" placeholder="Optional comment"></div>`,
+    <div class="field" style="margin-top:14px"><label>What is most useful, or what should improve?</label><input id="fb_comment" placeholder="Optional comment"></div>`,
     "Submit feedback", submitFeedback);
   return true;
 }
