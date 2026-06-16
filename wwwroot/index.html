@@ -432,6 +432,16 @@ function openAddBeneficiary(){
 }
 async function removeBeneficiary(id){const p=STATE.producers.find(x=>x.id===id);if(!p)return;if(confirm('Remove beneficiary "'+p.name+'"? This deletes it from the database.')){await api('/producers/'+id,'DELETE');await reload();toast('🗑 Removed: '+p.name);}}
 async function toggleSuspend(id){const p=STATE.producers.find(x=>x.id===id);if(!p)return;const r=await api('/producers/'+id+'/suspend','POST');await reload();toast((r.status==='Suspended'?'⏸ Suspended ':'▶ Reactivated ')+p.name);}
+/* searchable producer picker (custom dropdown — reliable open/close) */
+function prodSearch(){
+  const inp=$('v_prod'), box=$('v_prod_results'); if(!inp||!box) return;
+  const q=inp.value.trim().toLowerCase();
+  const list=scopedProducers().filter(p=>p.status==='Active'&&(!q||p.name.toLowerCase().includes(q))).slice(0,60);
+  box.innerHTML=list.length?list.map(p=>`<div onmousedown="prodPick('${p.name.replace(/'/g,"\\'")}')" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line)" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">${p.name}<span style="float:right;color:var(--muted);font-size:11px">${PROV[p.prov]||p.prov||''}</span></div>`).join(''):'<div style="padding:9px 12px;color:var(--muted)">No match</div>';
+  box.style.display='block';
+}
+function prodPick(n){const inp=$('v_prod');if(inp)inp.value=n;const box=$('v_prod_results');if(box)box.style.display='none';}
+document.addEventListener('click',e=>{const box=document.getElementById('v_prod_results'),inp=document.getElementById('v_prod');if(box&&inp&&e.target!==inp&&!box.contains(e.target))box.style.display='none';});
 async function issueVoucher(){
   const who=$('v_prod').value.trim(), pkn=$('v_pkg').value;
   if(!who || !STATE.producers.some(p=>p.name===who)){ toast('Please pick a producer from the list (start typing to search)'); return; }
@@ -578,7 +588,7 @@ const VIEWS={
     <p class="page-sub">Issue a voucher and watch it appear in the register and dashboard</p>
     <div class="note" style="margin-bottom:14px">📦 These are <b>commodity vouchers</b> — the producer receives a fixed <b>package of inputs (goods)</b>, never cash. Each voucher is <b>valid only until the end of the financial year</b> (${fmtDate(STATE.vouchers.find(v=>v.expiry)?STATE.vouchers.find(v=>v.expiry).expiry:'')}).</div>
     <div class="row"><div class="panel"><h3>Issue a new voucher</h3>
-      <div class="field"><label>Producer</label><input id="v_prod" list="v_prod_list" placeholder="Type to search a producer…" autocomplete="off" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font-size:14px;font-family:inherit"><datalist id="v_prod_list">${actives.map(p=>`<option value="${p.name.replace(/"/g,'&quot;')}"></option>`).join("")}</datalist><span style="font-size:11px;color:var(--muted)">${actives.length} producers — start typing a name</span></div>
+      <div class="field"><label>Producer</label><div style="position:relative"><input id="v_prod" autocomplete="off" placeholder="Type to search a producer…" oninput="prodSearch()" onfocus="prodSearch()" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font-size:14px;font-family:inherit"><div id="v_prod_results" style="display:none;position:absolute;left:0;right:0;top:100%;margin-top:2px;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:7px;max-height:260px;overflow:auto;box-shadow:0 10px 26px rgba(0,0,0,.20)"></div></div><span style="font-size:11px;color:var(--muted)">${actives.length} producers — start typing a name</span></div>
       <div class="field"><label>Subsidy package</label><select id="v_pkg">${STATE.packages.map(p=>`<option>${p.name}</option>`).join("")}</select></div>
       <div class="field"><label>Programme</label><select><option>Comprehensive Producer Development Support</option><option>Ilima/Letsema</option></select></div>
       <button class="btn gold" onclick="issueVoucher()">Issue voucher &amp; send SMS →</button>
