@@ -1006,7 +1006,7 @@ async function testIntegration(key){let r,txt='error';
     else if(key==='dss'){r=await api('/integrations/dss?prov=KZN');txt='KZN risk: '+r.risk+' · '+r.advisory;}
     else if(key==='rica'){r=await api('/integrations/rica?name=Nomsa%20Dlamini');txt='Nomsa Dlamini → '+(r.verified?'verified':'mismatch');}
     else if(key==='extension-directory'){const a=await api('/integrations/extension-directory');txt=a.length+' officers: '+a.map(o=>o.name).join(', ');}
-    else if(key==='sms'){const to=prompt('Send a test SMS to which number?\nUse international format, e.g. +27 82 123 4567','+27');if(to===null)return;r=await api('/integrations/sms','POST',{to:to.replace(/\s/g,''),body:'Test message from e-PSS (e-Voucher).'});txt=r.sent?('✅ Sent via '+r.source+(r.ref?' · '+r.ref:'')):(r.simulated?('Simulated — no SMS gateway key set yet':('❌ '+(r.error||'failed'))));}
+    else if(key==='sms'){const to=prompt('Send a test SMS to which number?\nUse international format, e.g. +27 82 123 4567','+27');if(to===null)return;r=await api('/integrations/sms','POST',{to:to.replace(/\s/g,''),body:'Test message from e-PSS (e-Voucher).'});txt=r.sent?('✅ Sent via '+r.source+(r.ref?' · '+r.ref:'')):(r.simulated?'Simulated — no SMS gateway key set yet':('❌ '+(r.error||'failed')));}
     else if(key==='bas'){r=await api('/integrations/bas','POST',{amount:3200});txt=r.status+' · '+r.ref;}
     else if(key==='gateway'){r=await api('/integrations/gateway','POST',{amount:3200});txt=r.status+' · '+r.ref;}
   }catch(e){}
