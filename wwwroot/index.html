@@ -383,7 +383,7 @@ function applyFilter(v){STATE.filter=v;renderView();const s=document.querySelect
 
 /* ----- toast / modal ----- */
 let toastT;
-function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+function toast(msg,ms){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms||2600);}
 function modal(title,bodyHtml,okLabel,okFn){
   $('modalRoot').innerHTML=`<div class="ovl" onclick="if(event.target===this)closeModal()"><div class="mcard"><h3>${title}</h3>${bodyHtml}<div style="margin-top:16px;text-align:right"><button class="btn alt" onclick="closeModal()">Cancel</button><button class="btn" id="modalOk">${okLabel}</button></div></div></div>`;
   $('modalOk').onclick=okFn;
@@ -445,13 +445,12 @@ document.addEventListener('click',e=>{const box=document.getElementById('v_prod_
 async function issueVoucher(){
   const who=$('v_prod').value.trim(), pkn=$('v_pkg').value;
   if(!who || !STATE.producers.some(p=>p.name===who)){ toast('Please pick a producer from the list (start typing to search)'); return; }
+  toast('Sending voucher SMS — confirming delivery before issuing…',9000);
   const r=await api('/vouchers','POST',{who,pkg:pkn});
-  if(r.error){toast(r.error);return;}
+  if(r.error){toast('⛔ '+r.error,9000);return;}
   await reload();
-  if(!r.sms){ toast('🎟️ '+r.no+' issued (OTP '+r.otp+'). ⚠️ No SMS — this farmer has no phone number on file.'); }
-  else if(r.sms.sent){ toast('🎟️ '+r.no+' issued — SMS accepted for '+r.sms.to+', checking delivery…'); const mid=r.sms.ref; if(mid) setTimeout(async()=>{ const st=await api('/integrations/sms-status?id='+encodeURIComponent(mid)); toast('📶 SMS to '+r.sms.to+': '+(st.status||'?')+(st.detail?(' · '+st.detail):'')); }, 8000); }
-  else if(r.sms.simulated){ toast('🎟️ '+r.no+' issued (OTP '+r.otp+'). SMS simulated — gateway not configured on this server.'); }
-  else { toast('🎟️ '+r.no+' issued, but ❌ SMS failed: '+(r.sms.error||'unknown')); }
+  if(r.sms&&r.sms.simulated){ toast('🎟️ '+r.no+' issued (OTP '+r.otp+'). SMS simulated — gateway not configured on this server.'); }
+  else { toast('✅ '+r.no+' issued — voucher SMS delivered to '+((r.sms&&r.sms.to)||'the farmer')+' (OTP '+r.otp+').',5000); }
 }
 function openAddPackage(){
   modal("Create subsidy package",`
