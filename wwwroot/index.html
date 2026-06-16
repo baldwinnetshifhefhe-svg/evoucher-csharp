@@ -861,7 +861,7 @@ function adhoc(){const on=$('r_on').value,fmt=$('r_fmt').value;if(fmt[0]==='P')e
 
 /* ================= CONTROL ================= */
 /* ============ LIVE DATA LAYER (talks to the real database server) ============ */
-const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
+const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json','x-auth-token':(typeof STATE!=='undefined'&&STATE&&STATE.token)||''},body:b?JSON.stringify(b):undefined}).then(r=>{ if(r.status===401 && url!=='/login' && typeof STATE!=='undefined' && STATE.me){ logout(); toast('🔒 Session ended — please sign in again'); } return r.json(); });
 const ROLE_LABEL={national:"National Superuser",provincial:"Provincial Admin",district:"District Officer",extension:"Extension Officer",finance:"Finance / Payments",auditor:"Auditor (read-only)",dealer:"Agro-Dealer"};
 const ROLE_LEVEL={national:"National",provincial:"Provincial",district:"District",extension:"District",finance:"National",auditor:"National",dealer:"Dealer"};
 const LABEL2TOKEN={"National Superuser":"national","Provincial Admin":"provincial","District Officer":"district","Extension Officer":"extension","Auditor (read-only)":"auditor"};
@@ -1017,12 +1017,12 @@ async function syncRegister(){const r=await api('/integrations/farmer-register/s
 async function doLogin(){
   const r=await api('/login','POST',{username:($('u').value||'').trim(),password:($('pw').value||'').trim()});
   if(r.error){const e=$('loginErr');e.textContent=r.error;e.style.display='block';return;}
-  $('loginErr').style.display='none'; STATE.me=r;
+  $('loginErr').style.display='none'; STATE.me=r; STATE.token=r.token;
   const portal={national:'gov',finance:'gov',auditor:'gov',provincial:'gov_prov',district:'gov_dist',dealer:'dealer'}[r.role]||'gov';
   enter(portal);
 }
 function openProfile(id){STATE.selected=id;STATE.view='profile';renderView();}
-function logout(){STATE.me=null;["shell","phoneApp","login"].forEach(i=>$(i).classList.add("hidden"));$("landing").classList.remove("hidden");}
+function logout(){STATE.me=null;STATE.token=null;["shell","phoneApp","login"].forEach(i=>$(i).classList.add("hidden"));$("landing").classList.remove("hidden");}
 
 /* ================= PHONE ================= */
 async function startProducerApp(){

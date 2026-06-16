@@ -11,6 +11,7 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDb>(o => o.UseSqlite("Data Source=evoucher.db"));
 var app = builder.Build();
+var sessions = new System.Collections.Concurrent.ConcurrentDictionary<string, long>();  // token -> issued epoch ms
 
 // security headers (production hardening)
 app.Use(async (ctx, next) => {
@@ -21,6 +22,20 @@ app.Use(async (ctx, next) => {
     h["Content-Security-Policy"] = "frame-ancestors 'none'";
     h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
     h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    await next();
+});
+
+// API authentication gate: every /api endpoint except /api/login needs a valid session token
+app.Use(async (ctx, next) =>
+{
+    var path = ctx.Request.Path.Value ?? "";
+    if (path.StartsWith("/api/") && path != "/api/login")
+    {
+        var tok = ctx.Request.Headers["x-auth-token"].ToString();
+        if (string.IsNullOrEmpty(tok)) { var a = ctx.Request.Headers["Authorization"].ToString(); if (a.StartsWith("Bearer ")) tok = a.Substring(7); }
+        if (!sessions.TryGetValue(tok, out var ts) || (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - ts) > 12L * 3600 * 1000)
+        { sessions.TryRemove(tok, out _); ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Not signed in" }); return; }
+    }
     await next();
 });
 
@@ -83,7 +98,9 @@ app.MapPost("/api/login", (AppDb db, LoginReq r) =>
     }
     u.FailedAttempts = 0; u.LockedUntil = 0; db.SaveChanges();
     Log(db, u.Name, "Signed in", "info"); db.SaveChanges();
-    return Results.Ok(new { username = u.Username, name = u.Name, role = u.Role, scope = u.Scope });
+    var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+    sessions[token] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    return Results.Ok(new { username = u.Username, name = u.Name, role = u.Role, scope = u.Scope, token });
 });
 
 // ---- producers ----
