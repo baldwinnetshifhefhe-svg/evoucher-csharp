@@ -98,6 +98,28 @@ static async Task<object> SendSms(string to, string text)
     // 3) simulated
     return new { sent = false, simulated = true, to = string.IsNullOrEmpty(to) ? "•••• ••••" : to, source = "SMS gateway (simulated — add BULKSMS_* or TWILIO_* to send for real)" };
 }
+// Ask BulkSMS the real delivery status of a message id (ACCEPTED / SENT / DELIVERED / FAILED).
+static async Task<object> SmsStatus(string id)
+{
+    var bUser = Environment.GetEnvironmentVariable("BULKSMS_USERNAME");
+    var bPass = Environment.GetEnvironmentVariable("BULKSMS_PASSWORD");
+    if (string.IsNullOrEmpty(bUser) || string.IsNullOrEmpty(bPass)) return new { id, status = "no-provider" };
+    if (string.IsNullOrEmpty(id)) return new { id, status = "no-id" };
+    try
+    {
+        using var http = new HttpClient();
+        var req = new HttpRequestMessage(HttpMethod.Get, "https://api.bulksms.com/v1/messages/" + Uri.EscapeDataString(id));
+        req.Headers.TryAddWithoutValidation("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes(bUser + ":" + bPass)));
+        var resp = await http.SendAsync(req);
+        var txt = await resp.Content.ReadAsStringAsync();
+        if (!resp.IsSuccessStatusCode) return new { id, status = "error", detail = "HTTP " + (int)resp.StatusCode };
+        using var doc = System.Text.Json.JsonDocument.Parse(txt);
+        var root = doc.RootElement; string st = "unknown", sub = "";
+        if (root.TryGetProperty("status", out var s)) { if (s.TryGetProperty("type", out var t)) st = t.GetString() ?? "unknown"; if (s.TryGetProperty("subtype", out var su)) sub = su.GetString() ?? ""; }
+        return new { id, status = st, detail = sub };
+    }
+    catch (Exception e) { return new { id, status = "error", detail = e.Message }; }
+}
 static List<Producer> Match(AppDb db, Criteria c)
 {
     var list = db.Producers.Where(p => p.Status == "Active").ToList();
@@ -338,6 +360,7 @@ app.MapGet("/api/integrations/dss", (string? prov) => { prov ??= "national"; var
 app.MapGet("/api/integrations/rica", (string? name) => { name ??= ""; bool ok = !name.ToLower().Contains("botha"); return Results.Ok(new { name, verified = ok, result = ok ? "Number registered in the producer's name" : "Name mismatch — manual check required", source = "RICA (simulated)" }); });
 app.MapGet("/api/integrations/extension-directory", () => Results.Ok(new[] { new { name = "M. Sitali", role = "Extension Officer", prov = "KZN", cell = "082 000 0001" }, new { name = "J. Ngaka", role = "Extension Officer", prov = "LP", cell = "082 000 0002" }, new { name = "T. Mothibi", role = "Extension Officer", prov = "MP", cell = "082 000 0003" } }));
 app.MapPost("/api/integrations/sms", async (SmsReq r) => Results.Ok(await SendSms(r.to ?? "", r.body ?? r.message ?? "Test message from e-PSS (e-Voucher).")));
+app.MapGet("/api/integrations/sms-status", async (string? id) => Results.Ok(await SmsStatus(id ?? "")));
 app.MapPost("/api/integrations/bas", () => Results.Ok(new { @ref = "BAS-" + DateTime.Now.Ticks.ToString()[^8..], status = "Disbursement raised", source = "BAS (simulated)" }));
 app.MapPost("/api/integrations/gateway", () => Results.Ok(new { @ref = "PG-" + DateTime.Now.Ticks.ToString()[^8..], status = "Paid", source = "Payment gateway (simulated)" }));
 
