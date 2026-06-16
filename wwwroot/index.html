@@ -1060,9 +1060,17 @@ function openProfile(id){STATE.selected=id;STATE.view='profile';renderView();}
 function logout(){STATE.me=null;STATE.token=null;["shell","phoneApp","login"].forEach(i=>$(i).classList.add("hidden"));$("landing").classList.remove("hidden");}
 
 /* ================= PHONE ================= */
+const DEMO_VOUCHER={id:0,no:'EV-2026-DEMO',who:'Sample Producer',pkg:'Maize starter pack',val:3200,otp:'4821',status:'Issued'};
+const DEMO_DEALERS=[{n:'AgriMart Tshwane',s:'Active'},{n:'FarmCo Polokwane',s:'Active'}];
 async function startProducerApp(){
-  try{const [vs,dl]=await Promise.all([api('/vouchers'),api('/dealers')]);STATE.vouchers=vs;STATE.dealers=dl.map(d=>({n:d.name,s:d.status}));}catch(e){}
-  window._pv=(STATE.vouchers||[]).find(v=>v.status==='Issued')||null;
+  // This is an un-authenticated PREVIEW portal, so /api calls may return an error (401) instead of an array.
+  // Only use the response if it's really a list; otherwise fall back to demo data so the flow always renders.
+  let vs=[],dl=[];
+  try{ const a=await api('/vouchers'); if(Array.isArray(a)) vs=a; }catch(e){}
+  try{ const b=await api('/dealers'); if(Array.isArray(b)) dl=b; }catch(e){}
+  STATE.vouchers=vs;
+  STATE.dealers = dl.length ? dl.map(d=>({n:d.name,s:d.status})) : DEMO_DEALERS;
+  window._pv = vs.find(v=>v.status==='Issued') || DEMO_VOUCHER;
   phoneStep(0);
 }
 function phoneStep(i){
@@ -1079,8 +1087,10 @@ function phoneStep(i){
 }
 async function phoneRedeem(){
   const v=window._pv; const dealer=(document.getElementById('pv_dealer')||{}).value||'AgriMart Tshwane';
+  // Demo voucher (or no auth) -> just walk the preview through to the success screen.
+  if(!v||!v.id){ phoneStep(3); return; }
   const r=await api('/vouchers/'+v.id+'/redeem','POST',{otp:v.otp,dealer});
-  if(r.error){toast('❌ '+r.error);return;}
+  if(r&&r.error){toast('❌ '+r.error);return;}
   phoneStep(3);
 }
 
