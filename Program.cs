@@ -117,6 +117,9 @@ using (var scope = app.Services.CreateScope())
     if (!db.Producers.Any()) Seed.Run(db);
     // hash any plain-text passwords (one-time migration; safe to run every start)
     foreach (var usr in db.Users.ToList().Where(x => x.Password != null && !x.Password.Contains(':'))) usr.Password = HashPw(usr.Password);
+    // seed two test farmer cellphones so issuing them a voucher sends a REAL SMS
+    foreach (var t in new[] { ("Thabo Mokoena", "+27718724388"), ("Nomsa Dlamini", "+27716084771") })
+    { var pr = db.Producers.FirstOrDefault(x => x.Name == t.Item1 && string.IsNullOrEmpty(x.Phone)); if (pr != null) pr.Phone = t.Item2; }
     db.SaveChanges();
 }
 
@@ -193,19 +196,23 @@ app.MapPost("/api/grievances/{id}/resolve", (AppDb db, int id) => { var g = db.G
 
 // ---- vouchers ----
 app.MapGet("/api/vouchers", (AppDb db) => db.Vouchers.OrderByDescending(v => v.Id).ToList());
-app.MapPost("/api/vouchers", (AppDb db, IssueReq r) =>
+app.MapPost("/api/vouchers", async (AppDb db, IssueReq r) =>
 {
     var pk = db.Packages.FirstOrDefault(p => p.Name == r.pkg);
     if (string.IsNullOrEmpty(r.who) || pk is null) return Results.BadRequest(new { error = "producer and package required" });
     if (db.Vouchers.Any(v => v.Who == r.who && v.Pkg == pk.Name && v.Status == "Issued"))
         return Results.BadRequest(new { error = "Beneficiary already has an active voucher for this package (anti double-dipping)" });
     var no = "EV-2026-00" + (480 + db.Vouchers.Count() + 1);
-    var otp = Otp(); var prov = db.Producers.FirstOrDefault(p => p.Name == r.who)?.Prov ?? "";
+    var prod = db.Producers.FirstOrDefault(p => p.Name == r.who);
+    var otp = Otp(); var prov = prod?.Prov ?? "";
     db.Vouchers.Add(new Voucher { No = no, Who = r.who, Prov = prov, Pkg = pk.Name, Val = pk.Val, Status = "Issued", Otp = otp, Created = Today(), Expiry = FyEnd() });
-    Log(db, r.who, $"Voucher {no} issued ({pk.Name}) — SMS sent; valid until {FyEnd()}", "info"); db.SaveChanges();
-    return Results.Ok(new { no, val = pk.Val, otp, expiry = FyEnd() });
+    Log(db, r.who, $"Voucher {no} issued ({pk.Name}); valid until {FyEnd()}", "info"); db.SaveChanges();
+    object? sms = null;
+    if (prod != null && !string.IsNullOrEmpty(prod.Phone))
+        sms = await SendSms(prod.Phone, $"DoA e-Voucher: You have received {pk.Name} (R{pk.Val}). Redeem at an accredited agro-dealer with OTP {otp}. Valid until {FyEnd()}. Ref {no}.");
+    return Results.Ok(new { no, val = pk.Val, otp, expiry = FyEnd(), sms });
 });
-app.MapPost("/api/vouchers/{id}/redeem", (AppDb db, int id, RedeemReq r) =>
+app.MapPost("/api/vouchers/{id}/redeem", async (AppDb db, int id, RedeemReq r) =>
 {
     var v = db.Vouchers.Find(id); if (v is null) return Results.NotFound();
     if (v.Status == "Redeemed") return Results.BadRequest(new { error = "already redeemed" });
@@ -217,6 +224,9 @@ app.MapPost("/api/vouchers/{id}/redeem", (AppDb db, int id, RedeemReq r) =>
     // dealer OTP method retained: supplier paid immediately on redemption (unchanged)
     db.Payments.Add(new Payment { Ts = Now(), Supplier = dealer, VoucherNo = v.No, Who = v.Who, Amount = v.Val, Gateway = "PayGate (gateway)", Ref = pref, Status = "Paid" });
     Log(db, v.Who, $"Voucher {v.No} redeemed at {dealer} — OTP verified; payment R{v.Val} via gateway ({pref}). Farmer confirmation code SMS-sent to verify receipt.", "ok"); db.SaveChanges();
+    var rprod = db.Producers.FirstOrDefault(p => p.Name == v.Who);
+    if (rprod != null && !string.IsNullOrEmpty(rprod.Phone))
+        await SendSms(rprod.Phone, $"DoA e-Voucher: Please confirm you received your inputs for voucher {v.No}. Confirmation code: {cc}.");
     return Results.Ok(new { ok = true, paid = v.Val, @ref = pref, confirm_code = cc });
 });
 // FARMER confirms they actually received the goods (added assurance, after redemption)
@@ -336,7 +346,7 @@ var port = Environment.GetEnvironmentVariable("PORT") ?? "5005";
 app.Run($"http://0.0.0.0:{port}");
 
 // ============================ DATA MODELS ===================================
-public class Producer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Ent { get; set; } = ""; public string Status { get; set; } = "Active"; public string Rica { get; set; } = "Verified"; public string Demo { get; set; } = ""; public string Email { get; set; } = ""; }
+public class Producer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Ent { get; set; } = ""; public string Status { get; set; } = "Active"; public string Rica { get; set; } = "Verified"; public string Demo { get; set; } = ""; public string Email { get; set; } = ""; public string Phone { get; set; } = ""; }
 public class Package { public int Id { get; set; } public string Name { get; set; } = ""; public int Val { get; set; } public string Items { get; set; } = ""; public string Status { get; set; } = "Active"; }
 public class Voucher { public int Id { get; set; } public string No { get; set; } = ""; public string Who { get; set; } = ""; public string Prov { get; set; } = ""; public string Pkg { get; set; } = ""; public int Val { get; set; } public string Status { get; set; } = ""; public string Otp { get; set; } = ""; public string Dealer { get; set; } = ""; public string Created { get; set; } = ""; [JsonPropertyName("redeemed_at")] public string RedeemedAt { get; set; } = ""; public string Expiry { get; set; } = ""; [JsonPropertyName("confirm_code")] public string ConfirmCode { get; set; } = ""; [JsonPropertyName("confirmed_at")] public string ConfirmedAt { get; set; } = ""; [JsonPropertyName("confirm_status")] public string ConfirmStatus { get; set; } = ""; }
 public class Dealer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Contact { get; set; } = ""; public string Status { get; set; } = "Active"; [JsonPropertyName("company_reg")] public string CompanyReg { get; set; } = ""; public string Vat { get; set; } = ""; public string Csd { get; set; } = ""; public string Bank { get; set; } = ""; public string Address { get; set; } = ""; public string Email { get; set; } = ""; public string Phone { get; set; } = ""; public string Catalogue { get; set; } = ""; }
