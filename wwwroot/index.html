@@ -57,7 +57,7 @@
   .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
   .pill.ok{background:#e6f4ea;color:#2e7d32}.pill.wait{background:#fdf3e0;color:#b9770a}.pill.no{background:#fdeceb;color:#c0392b}.pill.info{background:#e7f0fb;color:#1565c0}
   .btn{display:inline-block;background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:13px;cursor:pointer;font-weight:600;margin-right:6px}
-  .btn:hover{filter:brightness(1.08)}
+  .btn:hover{filter:brightness(1.07);transform:translateY(-1px);box-shadow:0 4px 11px rgba(0,0,0,.20)}
   .btn.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
   .btn.gold{background:var(--gold);color:#3a2e00}
   .btn.sm{padding:4px 9px;font-size:12px;margin:0}
@@ -141,8 +141,8 @@
   .panel{border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
   .panel h3{font-weight:700;letter-spacing:-.2px}
   .page-h{letter-spacing:-.4px;font-weight:800}
-  .btn{box-shadow:0 1px 2px rgba(0,0,0,.14);transition:filter .12s ease,transform .05s ease}
-  .btn:active{transform:translateY(1px)}
+  .btn{box-shadow:0 1px 2px rgba(0,0,0,.14);transition:filter .12s ease,transform .08s ease,box-shadow .12s ease}
+  .btn:active{transform:translateY(2px) scale(.97);filter:brightness(.93);box-shadow:0 1px 2px rgba(0,0,0,.25)}
   .side{padding-top:14px}
   .side .grp{font-weight:700}
   .side a{border-radius:0 24px 24px 0;margin-right:12px;transition:background .12s ease}
