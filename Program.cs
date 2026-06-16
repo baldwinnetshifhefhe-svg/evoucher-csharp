@@ -146,6 +146,8 @@ using (var scope = app.Services.CreateScope())
     if (pNom != null) { pNom.Phone = "+27716084771"; pNom.Name = "Mr Oscar Ndou"; }
     foreach (var vv in db.Vouchers.Where(v => v.Who == "Nomsa Dlamini").ToList()) vv.Who = "Mr Oscar Ndou";
     foreach (var fr in db.FarmerRegister.Where(f => f.Name == "Nomsa Dlamini").ToList()) fr.Name = "Mr Oscar Ndou";
+    if (!db.Producers.Any(p => p.Phone == "+27785462294"))
+        db.Producers.Add(new Producer { Name = "Mrs Bongane Netshifhefhe", Prov = "LP", Dist = "Vhembe", Ent = "Vegetables 2ha", Status = "Active", Rica = "Verified", Demo = "F·38", Email = "bongane.netshifhefhe@example.co.za", Phone = "+27785462294" });
     db.SaveChanges();
 }
 

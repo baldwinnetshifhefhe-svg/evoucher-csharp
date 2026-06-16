@@ -433,7 +433,8 @@ function openAddBeneficiary(){
 async function removeBeneficiary(id){const p=STATE.producers.find(x=>x.id===id);if(!p)return;if(confirm('Remove beneficiary "'+p.name+'"? This deletes it from the database.')){await api('/producers/'+id,'DELETE');await reload();toast('🗑 Removed: '+p.name);}}
 async function toggleSuspend(id){const p=STATE.producers.find(x=>x.id===id);if(!p)return;const r=await api('/producers/'+id+'/suspend','POST');await reload();toast((r.status==='Suspended'?'⏸ Suspended ':'▶ Reactivated ')+p.name);}
 async function issueVoucher(){
-  const who=$('v_prod').value, pkn=$('v_pkg').value;
+  const who=$('v_prod').value.trim(), pkn=$('v_pkg').value;
+  if(!who || !STATE.producers.some(p=>p.name===who)){ toast('Please pick a producer from the list (start typing to search)'); return; }
   const r=await api('/vouchers','POST',{who,pkg:pkn});
   if(r.error){toast(r.error);return;}
   await reload();toast('🎟️ '+r.no+' issued — SMS sent (OTP '+r.otp+')');
@@ -577,7 +578,7 @@ const VIEWS={
     <p class="page-sub">Issue a voucher and watch it appear in the register and dashboard</p>
     <div class="note" style="margin-bottom:14px">📦 These are <b>commodity vouchers</b> — the producer receives a fixed <b>package of inputs (goods)</b>, never cash. Each voucher is <b>valid only until the end of the financial year</b> (${fmtDate(STATE.vouchers.find(v=>v.expiry)?STATE.vouchers.find(v=>v.expiry).expiry:'')}).</div>
     <div class="row"><div class="panel"><h3>Issue a new voucher</h3>
-      <div class="field"><label>Producer</label><select id="v_prod">${actives.map(p=>`<option>${p.name}</option>`).join("")}</select></div>
+      <div class="field"><label>Producer</label><input id="v_prod" list="v_prod_list" placeholder="Type to search a producer…" autocomplete="off" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font-size:14px;font-family:inherit"><datalist id="v_prod_list">${actives.map(p=>`<option value="${p.name.replace(/"/g,'&quot;')}"></option>`).join("")}</datalist><span style="font-size:11px;color:var(--muted)">${actives.length} producers — start typing a name</span></div>
       <div class="field"><label>Subsidy package</label><select id="v_pkg">${STATE.packages.map(p=>`<option>${p.name}</option>`).join("")}</select></div>
       <div class="field"><label>Programme</label><select><option>Comprehensive Producer Development Support</option><option>Ilima/Letsema</option></select></div>
       <button class="btn gold" onclick="issueVoucher()">Issue voucher &amp; send SMS →</button>
@@ -978,26 +979,44 @@ function go(v){STATE.view=v;STATE.filter='';STATE.filterProv='';setActive(v);ren
 function renderView(){$("view").innerHTML=(VIEWS[STATE.view]||(()=>"<p>Coming soon</p>"))();$("view").scrollTop=0;}
 function showLogin(){$("landing").classList.add("hidden");$("login").classList.remove("hidden");}
 /* ---- feedback / ratings popup ---- */
-function fbStars(n){let s='';for(let i=1;i<=5;i++)s+=`<span onclick="setStars(${i})" style="cursor:pointer">${i<=n?'★':'☆'}</span>`;return s;}
-function setStars(n){window._fb=n;const el=$('fbStars');if(el)el.innerHTML=fbStars(n);}
+/* ---- multi-step user feedback wizard (ADEWS-style, 5 questions) ---- */
+const FB_ROLES=['National officer','Provincial officer','District officer','Extension officer','Agro-dealer / supplier','Producer / farmer','Other'];
+const FB_SECTORS=['🎟️ Voucher issuance','✅ Redemptions','👨‍🌾 Beneficiary register','💳 Payments','📑 Reports & M&E','All equally'];
 function showFeedback(){
   if(document.querySelector('.ovl'))return false; // don't stack on another dialog
-  window._fb=0;
-  const roles=['National officer','Provincial officer','District officer','Extension officer','Agro-dealer / supplier','Producer / farmer','Other'];
-  const mine=STATE.me?({national:'National officer',provincial:'Provincial officer',district:'District officer',dealer:'Agro-dealer / supplier',finance:'National officer',auditor:'National officer'}[STATE.me.role]||'Other'):'Other';
-  const opts=roles.map(r=>`<option ${r===mine?'selected':''}>${r}</option>`).join('');
-  modal("⭐ Your feedback on e-PSS",`
-    <div class="field"><label>What is your role?</label><select id="fb_role">${opts}</select></div>
-    <p style="font-size:13px;color:var(--muted);margin:8px 0 8px">Please rate how useful the system is to you:</p>
-    <div id="fbStars" style="font-size:32px;letter-spacing:6px;color:var(--gold)">${fbStars(0)}</div>
-    <div class="field" style="margin-top:14px"><label>What is most useful, or what should improve?</label><input id="fb_comment" placeholder="Optional comment"></div>`,
-    "Submit feedback", submitFeedback);
-  return true;
+  const mine=STATE.me?({national:'National officer',provincial:'Provincial officer',district:'District officer',dealer:'Agro-dealer / supplier',finance:'National officer',auditor:'National officer'}[STATE.me.role]||'Other'):'';
+  window._fbS={step:1,useful:0,ease:0,role:mine,sector:'',comment:''};
+  renderFb(); return true;
 }
-async function submitFeedback(){
-  if(!window._fb){toast('Please tap a star rating first');return;}
-  await api('/feedback','POST',{rating:window._fb,role:$('fb_role').value,comment:$('fb_comment').value,by:meLabel()});
+function fbSet(f,n){window._fbS[f]=n;renderFb();}
+function fbPick(f,v){window._fbS[f]=v;renderFb();}
+function fbBack(){if(window._fbS.step>1){window._fbS.step--;renderFb();}}
+function fbNext(){const s=window._fbS;if(s.step===1&&!s.useful){toast('Please tap a star rating first');return;}if(s.step<5){s.step++;renderFb();}}
+function fbStarRow(f){let s='';const v=window._fbS[f]||0;for(let i=1;i<=5;i++)s+=`<span onclick="fbSet('${f}',${i})" style="cursor:pointer">${i<=v?'★':'☆'}</span>`;return s;}
+async function fbSubmit(){
+  const s=window._fbS;const t=$('fb_comment');if(t)s.comment=t.value;
+  const comment=`Ease:${s.ease||'-'}/5 | Most important: ${s.sector||'-'}${s.comment?(' | '+s.comment):''}`;
+  await api('/feedback','POST',{rating:s.useful,role:s.role||'-',comment,by:meLabel()});
   closeModal(); if(STATE.me) await reload(); toast('🙏 Thank you for your feedback!');
+}
+function renderFb(){
+  const s=window._fbS, step=s.step, total=5, pct=Math.round(step/total*100);
+  const star='font-size:32px;letter-spacing:6px;color:var(--gold);text-align:center;margin:6px 0';
+  let body='';
+  if(step===1) body=`<p style="font-weight:600;margin:0 0 6px">How useful is e-PSS for your work?</p><div style="${star}">${fbStarRow('useful')}</div>`;
+  else if(step===2) body=`<p style="font-weight:600;margin:0 0 6px">How easy is e-PSS to use?</p><div style="${star}">${fbStarRow('ease')}</div>`;
+  else if(step===3) body=`<p style="font-weight:600;margin:0 0 10px">What is your role?</p><div style="display:flex;flex-wrap:wrap;gap:8px">${FB_ROLES.map(r=>`<span onclick="fbPick('role','${r}')" style="cursor:pointer;font-size:12.5px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);${s.role===r?'background:var(--accent);color:#fff;border-color:var(--accent)':'background:var(--card);color:var(--ink)'}">${r}</span>`).join('')}</div>`;
+  else if(step===4) body=`<p style="font-weight:600;margin:0 0 10px">Which part of e-PSS matters most to your work?</p>${FB_SECTORS.map(x=>`<div onclick="fbPick('sector','${x}')" style="cursor:pointer;padding:11px 13px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;${s.sector===x?'border-color:var(--accent);background:rgba(0,0,0,.04)':''}">${x}</div>`).join('')}`;
+  else body=`<p style="font-weight:600;margin:0 0 8px">Any suggestions or comments? (optional)</p><textarea id="fb_comment" placeholder="What would you add, improve, or change about e-PSS?" style="width:100%;min-height:90px;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font-family:inherit">${s.comment||''}</textarea>`;
+  $('modalRoot').innerHTML=`<div class="ovl" onclick="if(event.target===this)closeModal()"><div class="mcard">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><h3 style="margin:0">⭐ Your feedback on e-PSS</h3><button class="btn alt" style="padding:1px 9px" onclick="closeModal()">✕</button></div>
+    <div style="font-size:12px;color:var(--muted);margin:2px 0 10px">Help us improve e-PSS · Step ${step} of ${total}</div>
+    <div style="height:6px;background:rgba(0,0,0,.12);border-radius:6px;margin-bottom:16px"><div style="height:6px;width:${pct}%;background:var(--accent);border-radius:6px"></div></div>
+    ${body}
+    <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
+      <button class="btn alt" onclick="fbBack()" ${step===1?'style="visibility:hidden"':''}>← Back</button>
+      <button class="btn" onclick="${step<total?'fbNext()':'fbSubmit()'}">${step<total?'Next →':'Submit feedback ✓'}</button>
+    </div></div></div>`;
 }
 /* ---- integrations (simulated external systems) ---- */
 async function testIntegration(key){let r,txt='error';
