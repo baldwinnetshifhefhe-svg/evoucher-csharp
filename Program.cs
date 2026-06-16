@@ -246,7 +246,13 @@ app.MapPost("/api/vouchers", async (AppDb db, IssueReq r) =>
     var otp = Otp(); var prov = prod.Prov ?? "";
     var sms = await SendSms(prod.Phone, $"DoA e-Voucher: You have received {pk.Name} (R{pk.Val}). Redeem at an accredited agro-dealer with OTP {otp}. Valid until {FyEnd()}. Ref {no}.");
     bool simulated = Prop(sms, "simulated") is bool sb && sb;
-    if (!simulated)
+    if (simulated)
+    {
+        // On a live server, "simulated" means NO gateway is configured -> nothing was really sent -> refuse (Baldwin's rule). Local dev still allowed.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER")))
+            return Results.BadRequest(new { error = "Voucher NOT issued — no SMS gateway is configured on this server, so the voucher OTP cannot be delivered to " + prod.Phone + ". Add BULKSMS_USERNAME and BULKSMS_PASSWORD to this service, then retry.", sms });
+    }
+    else
     {
         bool sent = Prop(sms, "sent") is bool s2 && s2;
         if (!sent) return Results.BadRequest(new { error = "Voucher NOT issued — SMS could not be sent to " + prod.Phone + ": " + (Prop(sms, "error") as string ?? "unknown") + ". Fix the number, then retry.", sms });
