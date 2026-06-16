@@ -5,6 +5,8 @@
 // ============================================================================
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+using System.Security.Cryptography;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDb>(o => o.UseSqlite("Data Source=evoucher.db"));
@@ -20,7 +22,14 @@ static string Today() => DateTime.Now.ToString("dd MMM yyyy");
 static string Now() => DateTime.Now.ToString("yyyy/MM/dd HH:mm");
 static string MakeEmail(string name) => new string(name.ToLower().Where(c => char.IsLetter(c) || c == ' ').ToArray()).Trim().Replace(" ", ".") + "@example.co.za";
 static int Age(string demo) { var p = demo.Split('·'); return p.Length > 1 && int.TryParse(p[1].Trim(), out var a) ? a : 99; }
-static void Log(AppDb db, string actor, string evt, string kind) => db.Audit.Add(new Audit { Ts = Now(), Actor = actor, Event = evt, Kind = kind });
+static string Sha256(string s) { using var sha = SHA256.Create(); return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(s))).ToLowerInvariant(); }
+static void Log(AppDb db, string actor, string evt, string kind)   // tamper-evident hash chain
+{
+    var prev = db.Audit.OrderByDescending(a => a.Id).FirstOrDefault()?.Hash ?? "GENESIS";
+    var ts = Now();
+    var hash = Sha256($"{prev}|{ts}|{actor}|{evt}|{kind}");
+    db.Audit.Add(new Audit { Ts = ts, Actor = actor, Event = evt, Kind = kind, PrevHash = prev, Hash = hash });
+}
 static List<Producer> Match(AppDb db, Criteria c)
 {
     var list = db.Producers.Where(p => p.Status == "Active").ToList();
@@ -120,10 +129,34 @@ app.MapPost("/api/vouchers/{id}/redeem", (AppDb db, int id, RedeemReq r) =>
     if (!string.IsNullOrEmpty(v.Expiry) && DateTime.Now > DateTime.Parse(v.Expiry + "T23:59:59")) return Results.BadRequest(new { error = "Voucher expired (financial year ended) — cannot redeem" });
     if ((r.otp ?? "").Trim() != v.Otp) return Results.BadRequest(new { error = "Wrong OTP — redemption refused" });
     var dealer = r.dealer ?? "(dealer)"; v.Status = "Redeemed"; v.Dealer = dealer; v.RedeemedAt = Today();
+    var cc = Otp(); v.ConfirmCode = cc; v.ConfirmStatus = "";   // farmer confirmation code SMS-sent (added layer)
     var pref = "PG-" + DateTime.Now.Ticks.ToString()[^8..];
+    // dealer OTP method retained: supplier paid immediately on redemption (unchanged)
     db.Payments.Add(new Payment { Ts = Now(), Supplier = dealer, VoucherNo = v.No, Who = v.Who, Amount = v.Val, Gateway = "PayGate (gateway)", Ref = pref, Status = "Paid" });
-    Log(db, v.Who, $"Voucher {v.No} redeemed at {dealer} — OTP verified; immediate payment R{v.Val} via gateway ({pref})", "ok"); db.SaveChanges();
-    return Results.Ok(new { ok = true, paid = v.Val, @ref = pref });
+    Log(db, v.Who, $"Voucher {v.No} redeemed at {dealer} — OTP verified; payment R{v.Val} via gateway ({pref}). Farmer confirmation code SMS-sent to verify receipt.", "ok"); db.SaveChanges();
+    return Results.Ok(new { ok = true, paid = v.Val, @ref = pref, confirm_code = cc });
+});
+// FARMER confirms they actually received the goods (added assurance, after redemption)
+app.MapPost("/api/vouchers/{id}/confirm", (AppDb db, int id, ConfirmReq r) =>
+{
+    var v = db.Vouchers.Find(id); if (v is null) return Results.NotFound();
+    if (v.Status != "Redeemed") return Results.BadRequest(new { error = "only a redeemed voucher can be confirmed" });
+    if (v.ConfirmStatus == "Confirmed") return Results.BadRequest(new { error = "already confirmed by the farmer" });
+    if ((r.code ?? "").Trim() != v.ConfirmCode) return Results.BadRequest(new { error = "Wrong confirmation code — only the farmer who received the goods can confirm" });
+    v.ConfirmStatus = "Confirmed"; v.ConfirmedAt = Now();
+    Log(db, v.Who, $"Voucher {v.No} — FARMER CONFIRMED receipt of goods from {v.Dealer}.", "ok"); db.SaveChanges();
+    return Results.Ok(new { ok = true });
+});
+// FARMER disputes (did not receive / short) — opens a grievance for investigation/recovery
+app.MapPost("/api/vouchers/{id}/dispute", (AppDb db, int id, ConfirmReq r) =>
+{
+    var v = db.Vouchers.Find(id); if (v is null) return Results.NotFound();
+    if (v.Status != "Redeemed") return Results.BadRequest(new { error = "only a redeemed voucher can be disputed" });
+    v.ConfirmStatus = "Disputed";
+    var refn = "GR-" + (40 + db.Grievances.Count() + 3).ToString("D4");
+    db.Grievances.Add(new Grievance { Ref = refn, Who = v.Who, Issue = $"Did not receive / short delivery — voucher {v.No} at {v.Dealer}. {r.reason ?? "Reported by farmer."} (Payment already made — investigate / recover.)", Status = "Open", Created = Today() });
+    Log(db, v.Who, $"Voucher {v.No} DISPUTED by farmer — grievance {refn} opened to investigate {v.Dealer} (payment already released; recovery may be needed).", "no"); db.SaveChanges();
+    return Results.Ok(new { ok = true, grievance = refn });
 });
 
 // ---- targeted distribution ----
@@ -164,6 +197,34 @@ app.MapPost("/api/applications/{id}/reject", (AppDb db, int id, AppAction r) => 
 // ---- payments / audit / feedback ----
 app.MapGet("/api/payments", (AppDb db) => db.Payments.OrderByDescending(p => p.Id).ToList());
 app.MapGet("/api/audit", (AppDb db) => db.Audit.OrderByDescending(a => a.Id).Take(80).ToList());
+// tamper-evident audit: recompute the hash chain and report any break
+app.MapGet("/api/audit/verify", (AppDb db) =>
+{
+    var rows = db.Audit.OrderBy(a => a.Id).ToList();
+    string prev = "GENESIS"; bool ok = true; int? broken = null; int n = 0;
+    foreach (var rrec in rows)
+    {
+        if (string.IsNullOrEmpty(rrec.Hash)) continue;
+        var expect = Sha256($"{prev}|{rrec.Ts}|{rrec.Actor}|{rrec.Event}|{rrec.Kind}");
+        if (rrec.PrevHash != prev || rrec.Hash != expect) { ok = false; broken = rrec.Id; break; }
+        prev = rrec.Hash; n++;
+    }
+    return Results.Ok(new { ok, @checked = n, broken });
+});
+// confirmation oversight: per-dealer confirmed/awaiting/disputed (the aggregate-silence red flag)
+app.MapGet("/api/oversight/confirmation", (AppDb db) =>
+{
+    var rows = db.Vouchers.Where(v => v.Dealer != null && v.Dealer != "").AsEnumerable()
+        .GroupBy(v => v.Dealer)
+        .Select(g => new {
+            dealer = g.Key,
+            redeemed = g.Count(v => v.Status == "Redeemed"),
+            confirmed = g.Count(v => v.ConfirmStatus == "Confirmed"),
+            awaiting = g.Count(v => v.Status == "Redeemed" && string.IsNullOrEmpty(v.ConfirmStatus)),
+            disputed = g.Count(v => v.ConfirmStatus == "Disputed")
+        }).OrderByDescending(x => x.disputed).ThenByDescending(x => x.awaiting).ToList();
+    return Results.Ok(rows);
+});
 app.MapGet("/api/feedback", (AppDb db) => db.Feedback.OrderByDescending(f => f.Id).ToList());
 app.MapPost("/api/feedback", (AppDb db, FeedbackReq r) => { db.Feedback.Add(new Feedback { Ts = Now(), Role = r.role ?? "-", Rating = r.rating, Comment = r.comment ?? "", By = r.by ?? "" }); Log(db, r.by ?? "User", $"Feedback: {r.rating}* ({r.role})", "info"); db.SaveChanges(); return Results.Ok(new { ok = true }); });
 
@@ -194,12 +255,12 @@ app.Run($"http://0.0.0.0:{port}");
 // ============================ DATA MODELS ===================================
 public class Producer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Ent { get; set; } = ""; public string Status { get; set; } = "Active"; public string Rica { get; set; } = "Verified"; public string Demo { get; set; } = ""; public string Email { get; set; } = ""; }
 public class Package { public int Id { get; set; } public string Name { get; set; } = ""; public int Val { get; set; } public string Items { get; set; } = ""; public string Status { get; set; } = "Active"; }
-public class Voucher { public int Id { get; set; } public string No { get; set; } = ""; public string Who { get; set; } = ""; public string Prov { get; set; } = ""; public string Pkg { get; set; } = ""; public int Val { get; set; } public string Status { get; set; } = ""; public string Otp { get; set; } = ""; public string Dealer { get; set; } = ""; public string Created { get; set; } = ""; [JsonPropertyName("redeemed_at")] public string RedeemedAt { get; set; } = ""; public string Expiry { get; set; } = ""; }
+public class Voucher { public int Id { get; set; } public string No { get; set; } = ""; public string Who { get; set; } = ""; public string Prov { get; set; } = ""; public string Pkg { get; set; } = ""; public int Val { get; set; } public string Status { get; set; } = ""; public string Otp { get; set; } = ""; public string Dealer { get; set; } = ""; public string Created { get; set; } = ""; [JsonPropertyName("redeemed_at")] public string RedeemedAt { get; set; } = ""; public string Expiry { get; set; } = ""; [JsonPropertyName("confirm_code")] public string ConfirmCode { get; set; } = ""; [JsonPropertyName("confirmed_at")] public string ConfirmedAt { get; set; } = ""; [JsonPropertyName("confirm_status")] public string ConfirmStatus { get; set; } = ""; }
 public class Dealer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Contact { get; set; } = ""; public string Status { get; set; } = "Active"; [JsonPropertyName("company_reg")] public string CompanyReg { get; set; } = ""; public string Vat { get; set; } = ""; public string Csd { get; set; } = ""; public string Bank { get; set; } = ""; public string Address { get; set; } = ""; public string Email { get; set; } = ""; public string Phone { get; set; } = ""; public string Catalogue { get; set; } = ""; }
 public class User { public int Id { get; set; } public string Username { get; set; } = ""; public string Password { get; set; } = ""; public string Name { get; set; } = ""; public string Role { get; set; } = ""; public string Scope { get; set; } = ""; }
 public class Grievance { public int Id { get; set; } public string Ref { get; set; } = ""; public string Who { get; set; } = ""; public string Issue { get; set; } = ""; public string Status { get; set; } = "Open"; public string Created { get; set; } = ""; }
 public class Catalogue { public int Id { get; set; } public string N { get; set; } = ""; public string C { get; set; } = ""; public int P { get; set; } public string S { get; set; } = "Approved"; }
-public class Audit { public int Id { get; set; } public string Ts { get; set; } = ""; public string Actor { get; set; } = ""; public string Event { get; set; } = ""; public string Kind { get; set; } = ""; }
+public class Audit { public int Id { get; set; } public string Ts { get; set; } = ""; public string Actor { get; set; } = ""; public string Event { get; set; } = ""; public string Kind { get; set; } = ""; [JsonPropertyName("prev_hash")] public string PrevHash { get; set; } = ""; public string Hash { get; set; } = ""; }
 public class Message { public int Id { get; set; } public string Ts { get; set; } = ""; public string Audience { get; set; } = ""; public string Channel { get; set; } = ""; public string Subject { get; set; } = ""; public string Body { get; set; } = ""; public int Recipients { get; set; } }
 public class Application { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Ent { get; set; } = ""; public string Demo { get; set; } = ""; public string Status { get; set; } = "Applied"; public string Created { get; set; } = ""; [JsonPropertyName("recommended_by")] public string RecommendedBy { get; set; } = ""; [JsonPropertyName("approved_by")] public string ApprovedBy { get; set; } = ""; public string Reason { get; set; } = ""; }
 public class Payment { public int Id { get; set; } public string Ts { get; set; } = ""; public string Supplier { get; set; } = ""; [JsonPropertyName("voucher_no")] public string VoucherNo { get; set; } = ""; public string Who { get; set; } = ""; public int Amount { get; set; } public string Gateway { get; set; } = ""; public string Ref { get; set; } = ""; public string Status { get; set; } = ""; }
@@ -210,6 +271,7 @@ public class FarmerRegister { public int Id { get; set; } public string Name { g
 public record LoginReq(string? username, string? password);
 public record IssueReq(string? who, string? pkg);
 public record RedeemReq(string? otp, string? dealer);
+public record ConfirmReq(string? code, string? reason);
 public record GrievanceReq(string? who, string? issue);
 public record FeedbackReq(int rating, string? role, string? comment, string? by);
 public record AppAction(string? by, string? reason);
