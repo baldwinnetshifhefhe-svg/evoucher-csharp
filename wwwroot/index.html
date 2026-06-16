@@ -437,7 +437,7 @@ function prodSearch(){
   const inp=$('v_prod'), box=$('v_prod_results'); if(!inp||!box) return;
   const q=inp.value.trim().toLowerCase();
   const list=scopedProducers().filter(p=>p.status==='Active'&&(!q||p.name.toLowerCase().includes(q))).slice(0,60);
-  box.innerHTML=list.length?list.map(p=>`<div onmousedown="prodPick('${p.name.replace(/'/g,"\\'")}')" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line)" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">${p.name}<span style="float:right;color:var(--muted);font-size:11px">${PROV[p.prov]||p.prov||''}</span></div>`).join(''):'<div style="padding:9px 12px;color:var(--muted)">No match</div>';
+  box.innerHTML=list.length?list.map(p=>`<div onmousedown="prodPick('${p.name.replace(/'/g,"\\'")}')" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line)" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">${p.phone?'📱 ':''}${p.name}<span style="float:right;color:var(--muted);font-size:11px">${p.phone?'has SMS · ':''}${PROV[p.prov]||p.prov||''}</span></div>`).join(''):'<div style="padding:9px 12px;color:var(--muted)">No match</div>';
   box.style.display='block';
 }
 function prodPick(n){const inp=$('v_prod');if(inp)inp.value=n;const box=$('v_prod_results');if(box)box.style.display='none';}
@@ -447,7 +447,11 @@ async function issueVoucher(){
   if(!who || !STATE.producers.some(p=>p.name===who)){ toast('Please pick a producer from the list (start typing to search)'); return; }
   const r=await api('/vouchers','POST',{who,pkg:pkn});
   if(r.error){toast(r.error);return;}
-  await reload();toast('🎟️ '+r.no+' issued — SMS sent (OTP '+r.otp+')');
+  await reload();
+  if(!r.sms){ toast('🎟️ '+r.no+' issued (OTP '+r.otp+'). ⚠️ No SMS — this farmer has no phone number on file.'); }
+  else if(r.sms.sent){ toast('🎟️ '+r.no+' issued — SMS accepted for '+r.sms.to+', checking delivery…'); const mid=r.sms.ref; if(mid) setTimeout(async()=>{ const st=await api('/integrations/sms-status?id='+encodeURIComponent(mid)); toast('📶 SMS to '+r.sms.to+': '+(st.status||'?')+(st.detail?(' · '+st.detail):'')); }, 8000); }
+  else if(r.sms.simulated){ toast('🎟️ '+r.no+' issued (OTP '+r.otp+'). SMS simulated — gateway not configured on this server.'); }
+  else { toast('🎟️ '+r.no+' issued, but ❌ SMS failed: '+(r.sms.error||'unknown')); }
 }
 function openAddPackage(){
   modal("Create subsidy package",`
