@@ -60,24 +60,43 @@ static void Log(AppDb db, string actor, string evt, string kind)   // tamper-evi
 }
 static string HashPw(string pw) { var salt = RandomNumberGenerator.GetBytes(16); var h = Rfc2898DeriveBytes.Pbkdf2(pw ?? "", salt, 100000, HashAlgorithmName.SHA256, 32); return Convert.ToHexString(salt) + ":" + Convert.ToHexString(h); }
 static bool CheckPw(string pw, string stored) { if (string.IsNullOrEmpty(stored)) return false; if (!stored.Contains(':')) return pw == stored; var parts = stored.Split(':'); try { var salt = Convert.FromHexString(parts[0]); var h = Rfc2898DeriveBytes.Pbkdf2(pw ?? "", salt, 100000, HashAlgorithmName.SHA256, 32); return Convert.ToHexString(h) == parts[1]; } catch { return false; } }
-// Real SMS via Twilio when env vars are set; otherwise safely simulated.
+// Real SMS: prefers BulkSMS (SA-local), then Twilio; otherwise safely simulated.
 static async Task<object> SendSms(string to, string text)
 {
+    using var http = new HttpClient();
+    // 1) BulkSMS — best for South African delivery
+    var bUser = Environment.GetEnvironmentVariable("BULKSMS_USERNAME");
+    var bPass = Environment.GetEnvironmentVariable("BULKSMS_PASSWORD");
+    if (!string.IsNullOrEmpty(bUser) && !string.IsNullOrEmpty(bPass))
+    {
+        try
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, "https://api.bulksms.com/v1/messages");
+            req.Headers.TryAddWithoutValidation("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes(bUser + ":" + bPass)));
+            req.Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { to, body = text }), Encoding.UTF8, "application/json");
+            var resp = await http.SendAsync(req);
+            return new { sent = resp.IsSuccessStatusCode, to, status = (int)resp.StatusCode, source = "BulkSMS" };
+        }
+        catch (Exception e) { return new { sent = false, error = e.Message, to, source = "BulkSMS" }; }
+    }
+    // 2) Twilio
     var sid = Environment.GetEnvironmentVariable("TWILIO_ACCOUNT_SID");
     var tok = Environment.GetEnvironmentVariable("TWILIO_AUTH_TOKEN");
     var from = Environment.GetEnvironmentVariable("TWILIO_FROM");
-    if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(tok) || string.IsNullOrEmpty(from))
-        return new { sent = false, simulated = true, to = string.IsNullOrEmpty(to) ? "•••• ••••" : to, source = "SMS gateway (simulated — set TWILIO_* env vars to send for real)" };
-    try
+    if (!string.IsNullOrEmpty(sid) && !string.IsNullOrEmpty(tok) && !string.IsNullOrEmpty(from))
     {
-        using var http = new HttpClient();
-        var req = new HttpRequestMessage(HttpMethod.Post, $"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json");
-        req.Headers.TryAddWithoutValidation("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes(sid + ":" + tok)));
-        req.Content = new FormUrlEncodedContent(new Dictionary<string, string> { { "To", to }, { "From", from }, { "Body", text } });
-        var resp = await http.SendAsync(req);
-        return new { sent = resp.IsSuccessStatusCode, to, status = (int)resp.StatusCode, source = "Twilio" };
+        try
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, $"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json");
+            req.Headers.TryAddWithoutValidation("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes(sid + ":" + tok)));
+            req.Content = new FormUrlEncodedContent(new Dictionary<string, string> { { "To", to }, { "From", from }, { "Body", text } });
+            var resp = await http.SendAsync(req);
+            return new { sent = resp.IsSuccessStatusCode, to, status = (int)resp.StatusCode, source = "Twilio" };
+        }
+        catch (Exception e) { return new { sent = false, error = e.Message, to, source = "Twilio" }; }
     }
-    catch (Exception e) { return new { sent = false, error = e.Message, to, source = "Twilio" }; }
+    // 3) simulated
+    return new { sent = false, simulated = true, to = string.IsNullOrEmpty(to) ? "•••• ••••" : to, source = "SMS gateway (simulated — add BULKSMS_* or TWILIO_* to send for real)" };
 }
 static List<Producer> Match(AppDb db, Criteria c)
 {
