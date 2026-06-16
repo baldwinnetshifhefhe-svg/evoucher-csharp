@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDb>(o => o.UseSqlite("Data Source=evoucher.db"));
@@ -59,6 +60,25 @@ static void Log(AppDb db, string actor, string evt, string kind)   // tamper-evi
 }
 static string HashPw(string pw) { var salt = RandomNumberGenerator.GetBytes(16); var h = Rfc2898DeriveBytes.Pbkdf2(pw ?? "", salt, 100000, HashAlgorithmName.SHA256, 32); return Convert.ToHexString(salt) + ":" + Convert.ToHexString(h); }
 static bool CheckPw(string pw, string stored) { if (string.IsNullOrEmpty(stored)) return false; if (!stored.Contains(':')) return pw == stored; var parts = stored.Split(':'); try { var salt = Convert.FromHexString(parts[0]); var h = Rfc2898DeriveBytes.Pbkdf2(pw ?? "", salt, 100000, HashAlgorithmName.SHA256, 32); return Convert.ToHexString(h) == parts[1]; } catch { return false; } }
+// Real SMS via Twilio when env vars are set; otherwise safely simulated.
+static async Task<object> SendSms(string to, string text)
+{
+    var sid = Environment.GetEnvironmentVariable("TWILIO_ACCOUNT_SID");
+    var tok = Environment.GetEnvironmentVariable("TWILIO_AUTH_TOKEN");
+    var from = Environment.GetEnvironmentVariable("TWILIO_FROM");
+    if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(tok) || string.IsNullOrEmpty(from))
+        return new { sent = false, simulated = true, to = string.IsNullOrEmpty(to) ? "•••• ••••" : to, source = "SMS gateway (simulated — set TWILIO_* env vars to send for real)" };
+    try
+    {
+        using var http = new HttpClient();
+        var req = new HttpRequestMessage(HttpMethod.Post, $"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json");
+        req.Headers.TryAddWithoutValidation("Authorization", "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes(sid + ":" + tok)));
+        req.Content = new FormUrlEncodedContent(new Dictionary<string, string> { { "To", to }, { "From", from }, { "Body", text } });
+        var resp = await http.SendAsync(req);
+        return new { sent = resp.IsSuccessStatusCode, to, status = (int)resp.StatusCode, source = "Twilio" };
+    }
+    catch (Exception e) { return new { sent = false, error = e.Message, to, source = "Twilio" }; }
+}
 static List<Producer> Match(AppDb db, Criteria c)
 {
     var list = db.Producers.Where(p => p.Status == "Active").ToList();
@@ -288,7 +308,7 @@ app.MapPost("/api/integrations/farmer-register/sync", (AppDb db) =>
 app.MapGet("/api/integrations/dss", (string? prov) => { prov ??= "national"; var lv = new[] { "Low", "Watch", "Medium", "High" }; int i = prov.Sum(ch => ch) % lv.Length; return Results.Ok(new { prov, risk = lv[i], rainfall_mm = i * 7 + 3, advisory = i >= 2 ? "Dry spell expected — advise water-wise inputs" : "Conditions favourable for planting", source = "DSS (simulated)" }); });
 app.MapGet("/api/integrations/rica", (string? name) => { name ??= ""; bool ok = !name.ToLower().Contains("botha"); return Results.Ok(new { name, verified = ok, result = ok ? "Number registered in the producer's name" : "Name mismatch — manual check required", source = "RICA (simulated)" }); });
 app.MapGet("/api/integrations/extension-directory", () => Results.Ok(new[] { new { name = "M. Sitali", role = "Extension Officer", prov = "KZN", cell = "082 000 0001" }, new { name = "J. Ngaka", role = "Extension Officer", prov = "LP", cell = "082 000 0002" }, new { name = "T. Mothibi", role = "Extension Officer", prov = "MP", cell = "082 000 0003" } }));
-app.MapPost("/api/integrations/sms", () => Results.Ok(new { sent = true, @ref = "SMS-" + DateTime.Now.Ticks.ToString()[^7..], source = "SMS gateway (simulated)" }));
+app.MapPost("/api/integrations/sms", async (SmsReq r) => Results.Ok(await SendSms(r.to ?? "", r.body ?? r.message ?? "Test message from e-PSS (e-Voucher).")));
 app.MapPost("/api/integrations/bas", () => Results.Ok(new { @ref = "BAS-" + DateTime.Now.Ticks.ToString()[^8..], status = "Disbursement raised", source = "BAS (simulated)" }));
 app.MapPost("/api/integrations/gateway", () => Results.Ok(new { @ref = "PG-" + DateTime.Now.Ticks.ToString()[^8..], status = "Paid", source = "Payment gateway (simulated)" }));
 
@@ -316,6 +336,7 @@ public record LoginReq(string? username, string? password);
 public record IssueReq(string? who, string? pkg);
 public record RedeemReq(string? otp, string? dealer);
 public record ConfirmReq(string? code, string? reason);
+public record SmsReq(string? to, string? body, string? message);
 public record GrievanceReq(string? who, string? issue);
 public record FeedbackReq(int rating, string? role, string? comment, string? by);
 public record AppAction(string? by, string? reason);
