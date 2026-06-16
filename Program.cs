@@ -139,9 +139,13 @@ using (var scope = app.Services.CreateScope())
     if (!db.Producers.Any()) Seed.Run(db);
     // hash any plain-text passwords (one-time migration; safe to run every start)
     foreach (var usr in db.Users.ToList().Where(x => x.Password != null && !x.Password.Contains(':'))) usr.Password = HashPw(usr.Password);
-    // seed two test farmer cellphones so issuing them a voucher sends a REAL SMS
-    foreach (var t in new[] { ("Thabo Mokoena", "+27718724388"), ("Nomsa Dlamini", "+27716084771") })
-    { var pr = db.Producers.FirstOrDefault(x => x.Name == t.Item1 && string.IsNullOrEmpty(x.Phone)); if (pr != null) pr.Phone = t.Item2; }
+    // seed two test farmers' cellphones (and name the second Mr Oscar Ndou) so issuing a voucher sends a REAL SMS
+    var pTha = db.Producers.FirstOrDefault(x => x.Name == "Thabo Mokoena");
+    if (pTha != null && string.IsNullOrEmpty(pTha.Phone)) pTha.Phone = "+27718724388";
+    var pNom = db.Producers.FirstOrDefault(x => x.Name == "Nomsa Dlamini");
+    if (pNom != null) { pNom.Phone = "+27716084771"; pNom.Name = "Mr Oscar Ndou"; }
+    foreach (var vv in db.Vouchers.Where(v => v.Who == "Nomsa Dlamini").ToList()) vv.Who = "Mr Oscar Ndou";
+    foreach (var fr in db.FarmerRegister.Where(f => f.Name == "Nomsa Dlamini").ToList()) fr.Name = "Mr Oscar Ndou";
     db.SaveChanges();
 }
 
