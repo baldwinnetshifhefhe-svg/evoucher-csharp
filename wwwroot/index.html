@@ -445,11 +445,12 @@ document.addEventListener('click',e=>{const box=document.getElementById('v_prod_
 async function issueVoucher(){
   const who=$('v_prod').value.trim(), pkn=$('v_pkg').value;
   if(!who || !STATE.producers.some(p=>p.name===who)){ toast('Please pick a producer from the list (start typing to search)'); return; }
-  toast('Sending voucher SMS — confirming delivery before issuing…',9000);
+  toast('Issuing voucher…',9000);
   const r=await api('/vouchers','POST',{who,pkg:pkn});
   if(r.error){toast('⛔ '+r.error,9000);return;}
   await reload();
-  if(r.sms&&r.sms.simulated){ toast('🎟️ '+r.no+' issued (OTP '+r.otp+'). SMS simulated — gateway not configured on this server.'); }
+  if(r.sms&&r.sms.demo){ toast('🎟️ '+r.no+' issued — DEMO mode. OTP is '+r.otp+'. (Live SMS is paused until the Department authorises the sender ID.)',8000); }
+  else if(r.sms&&r.sms.simulated){ toast('🎟️ '+r.no+' issued (OTP '+r.otp+'). SMS simulated — gateway not configured on this server.'); }
   else { toast('✅ '+r.no+' issued — voucher SMS delivered to '+((r.sms&&r.sms.to)||'the farmer')+' (OTP '+r.otp+').',5000); }
 }
 function openAddPackage(){

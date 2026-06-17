@@ -238,41 +238,51 @@ app.MapPost("/api/vouchers", async (AppDb db, IssueReq r) =>
     if (db.Vouchers.Any(v => v.Who == r.who && v.Pkg == pk.Name && v.Status == "Issued"))
         return Results.BadRequest(new { error = "Beneficiary already has an active voucher for this package (anti double-dipping)" });
     var prod = db.Producers.FirstOrDefault(p => p.Name == r.who);
-    // RULE: no SMS = no voucher. The farmer can only redeem with the OTP we SMS them,
-    // so a voucher that can't be delivered must not be issued. Check phone + send + confirm BEFORE committing.
-    if (prod is null || string.IsNullOrEmpty(prod.Phone))
+    // SMS sender ID not yet authorised by the Department, so voucher/OTP content is filtered (NOT_SENT) on every number.
+    // Default = DEMO: issue with the OTP shown on-screen, don't send. Once the Dept authorises the sender, set env SMS_LIVE=true
+    // and the strict "no SMS = no voucher" rule (real send + delivery check) applies again automatically.
+    bool demo = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SMS_LIVE"));
+    if (!demo && (prod is null || string.IsNullOrEmpty(prod.Phone)))
         return Results.BadRequest(new { error = "Voucher NOT issued — " + r.who + " has no mobile number on file, so the voucher SMS (with the OTP) cannot be delivered. Add a phone number on the Beneficiaries register first." });
     var no = "EV-2026-00" + (480 + db.Vouchers.Count() + 1);
-    var otp = Otp(); var prov = prod.Prov ?? "";
-    var sms = await SendSms(prod.Phone, $"DoA e-Voucher: You have received {pk.Name} (R{pk.Val}). Redeem at an accredited agro-dealer with OTP {otp}. Valid until {FyEnd()}. Ref {no}.");
-    bool simulated = Prop(sms, "simulated") is bool sb && sb;
-    if (simulated)
+    var otp = Otp(); var prov = prod?.Prov ?? "";
+    object sms;
+    if (demo)
     {
-        // On a live server, "simulated" means NO gateway is configured -> nothing was really sent -> refuse (Baldwin's rule). Local dev still allowed.
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER")))
-            return Results.BadRequest(new { error = "Voucher NOT issued — no SMS gateway is configured on this server, so the voucher OTP cannot be delivered to " + prod.Phone + ". Add BULKSMS_USERNAME and BULKSMS_PASSWORD to this service, then retry.", sms });
+        sms = new { demo = true, sent = false, to = prod?.Phone };
     }
     else
     {
-        bool sent = Prop(sms, "sent") is bool s2 && s2;
-        if (!sent) return Results.BadRequest(new { error = "Voucher NOT issued — SMS could not be sent to " + prod.Phone + ": " + (Prop(sms, "error") as string ?? "unknown") + ". Fix the number, then retry.", sms });
-        var reff = Prop(sms, "reff") as string;
-        if (!string.IsNullOrEmpty(reff))
+        sms = await SendSms(prod!.Phone, $"DoA e-Voucher: You have received {pk.Name} (R{pk.Val}). Redeem at an accredited agro-dealer with OTP {otp}. Valid until {FyEnd()}. Ref {no}.");
+        bool simulated = Prop(sms, "simulated") is bool sb && sb;
+        if (simulated)
         {
-            foreach (var dly in new[] { 1500, 2000, 2500, 3000 })
+            // On a live server, "simulated" means NO gateway is configured -> nothing was really sent -> refuse (Baldwin's rule). Local dev still allowed.
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RENDER")))
+                return Results.BadRequest(new { error = "Voucher NOT issued — no SMS gateway is configured on this server, so the voucher OTP cannot be delivered to " + prod.Phone + ". Add BULKSMS_USERNAME and BULKSMS_PASSWORD to this service, then retry.", sms });
+        }
+        else
+        {
+            bool sent = Prop(sms, "sent") is bool s2 && s2;
+            if (!sent) return Results.BadRequest(new { error = "Voucher NOT issued — SMS could not be sent to " + prod.Phone + ": " + (Prop(sms, "error") as string ?? "unknown") + ". Fix the number, then retry.", sms });
+            var reff = Prop(sms, "reff") as string;
+            if (!string.IsNullOrEmpty(reff))
             {
-                await Task.Delay(dly);
-                var stt = await SmsStatus(reff);
-                var t = (Prop(stt, "status") as string ?? "").ToUpper();
-                var det = (Prop(stt, "detail") as string ?? "").ToUpper();
-                if (t == "DELIVERED" || t == "SENT") break;
-                if (t == "FAILED" || t == "REJECTED" || t == "UNDELIVERED" || det == "NOT_SENT")
-                    return Results.BadRequest(new { error = "Voucher NOT issued — the network rejected the SMS to " + prod.Phone + " (" + (det.Length > 0 ? det : t) + "). This number is likely on the WASPA Do-Not-Contact list or is not SMS-active. Enable WASPA transactional consent in BulkSMS, or use a different number, then retry.", sms, delivery = stt });
+                foreach (var dly in new[] { 1500, 2000, 2500, 3000 })
+                {
+                    await Task.Delay(dly);
+                    var stt = await SmsStatus(reff);
+                    var t = (Prop(stt, "status") as string ?? "").ToUpper();
+                    var det = (Prop(stt, "detail") as string ?? "").ToUpper();
+                    if (t == "DELIVERED" || t == "SENT") break;
+                    if (t == "FAILED" || t == "REJECTED" || t == "UNDELIVERED" || det == "NOT_SENT")
+                        return Results.BadRequest(new { error = "Voucher NOT issued — the network rejected the SMS to " + prod.Phone + " (" + (det.Length > 0 ? det : t) + "). This number is likely on the WASPA Do-Not-Contact list or is not SMS-active. Enable WASPA transactional consent in BulkSMS, or use a different number, then retry.", sms, delivery = stt });
+                }
             }
         }
     }
     db.Vouchers.Add(new Voucher { No = no, Who = r.who, Prov = prov, Pkg = pk.Name, Val = pk.Val, Status = "Issued", Otp = otp, Created = Today(), Expiry = FyEnd() });
-    Log(db, r.who, $"Voucher {no} issued ({pk.Name}) — SMS sent to {prod.Phone}; valid until {FyEnd()}", "info"); db.SaveChanges();
+    Log(db, r.who, demo ? $"Voucher {no} issued ({pk.Name}) — DEMO mode, OTP shown on-screen (live SMS paused); valid until {FyEnd()}" : $"Voucher {no} issued ({pk.Name}) — SMS sent to {prod!.Phone}; valid until {FyEnd()}", "info"); db.SaveChanges();
     return Results.Ok(new { no, val = pk.Val, otp, expiry = FyEnd(), sms });
 });
 app.MapPost("/api/vouchers/{id}/redeem", async (AppDb db, int id, RedeemReq r) =>
