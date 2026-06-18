@@ -59,6 +59,27 @@ static string Now() => DateTime.Now.ToString("yyyy/MM/dd HH:mm");
 static string MakeEmail(string name) => new string(name.ToLower().Where(c => char.IsLetter(c) || c == ' ').ToArray()).Trim().Replace(" ", ".") + "@example.co.za";
 static int Age(string demo) { var p = demo.Split('·'); return p.Length > 1 && int.TryParse(p[1].Trim(), out var a) ? a : 99; }
 static string Sha256(string s) { using var sha = SHA256.Create(); return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(s))).ToLowerInvariant(); }
+// South African ID number: 13 digits, valid date of birth, Luhn checksum; decodes DOB / gender / citizenship.
+static bool LuhnValid(string s) { int sum = 0; bool alt = false; for (int i = s.Length - 1; i >= 0; i--) { int d = s[i] - '0'; if (alt) { d *= 2; if (d > 9) d -= 9; } sum += d; alt = !alt; } return sum % 10 == 0; }
+static int LuhnCheckDigit(string twelve) { int sum = 0; bool alt = true; for (int i = twelve.Length - 1; i >= 0; i--) { int d = twelve[i] - '0'; if (alt) { d *= 2; if (d > 9) d -= 9; } sum += d; alt = !alt; } return (10 - (sum % 10)) % 10; }
+static (bool ok, string reason, string dob, string gender, string citizen) ValidateSaId(string id)
+{
+    if (id.Length != 13 || !id.All(char.IsDigit)) return (false, "a South African ID must be 13 digits", "", "", "");
+    int yy = int.Parse(id.Substring(0, 2)), mm = int.Parse(id.Substring(2, 2)), dd = int.Parse(id.Substring(4, 2));
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return (false, "the date of birth in the ID is not valid", "", "", "");
+    if (!LuhnValid(id)) return (false, "the checksum digit does not match (not a genuine ID number)", "", "", "");
+    int century = yy <= (DateTime.Now.Year % 100) ? 2000 : 1900;
+    string dob = $"{century + yy:0000}-{mm:00}-{dd:00}";
+    int seq = int.Parse(id.Substring(6, 4));
+    string gender = seq < 5000 ? "Female" : "Male";
+    string citizen = id[10] == '0' ? "SA citizen" : "Permanent resident";
+    return (true, "structurally valid", dob, gender, citizen);
+}
+static string GenSaId(int year, int mm, int dd, int seq, bool citizen = true)
+{
+    string twelve = $"{year % 100:00}{mm:00}{dd:00}{seq % 10000:0000}{(citizen ? 0 : 1)}8";
+    return twelve + LuhnCheckDigit(twelve).ToString();
+}
 static void Log(AppDb db, string actor, string evt, string kind)   // tamper-evident hash chain
 {
     var prev = db.Audit.OrderByDescending(a => a.Id).FirstOrDefault()?.Hash ?? "GENESIS";
@@ -164,9 +185,15 @@ using (var scope = app.Services.CreateScope())
     if (!db.Producers.Any(p => p.Phone == "+27722859144"))
         db.Producers.Add(new Producer { Name = "Miss Mukundi Luvhengo", Prov = "LP", Dist = "Vhembe", Ent = "Maize 3ha", Status = "Active", Rica = "Verified", Demo = "F·29", Email = "mukundi.luvhengo@example.co.za", Phone = "+27722859144" });
     db.SaveChanges();
-    // seed a simulated Home Affairs ID number for any producer missing one (Addendum: compulsory ID + Home Affairs validation)
+    // seed a genuinely valid SA ID number for any producer missing one (matches their gender/age), for the Home Affairs validation demo
     foreach (var pr in db.Producers.Where(x => string.IsNullOrEmpty(x.IdNo)).ToList())
-    { pr.IdNo = (8500000000000L + pr.Id).ToString(); pr.HomeAffairs = pr.Name.ToLower().Contains("botha") ? "Mismatch" : "Verified"; }
+    {
+        bool male = pr.Demo.StartsWith("M");
+        int age = Age(pr.Demo); if (age <= 0 || age > 110) age = 40;
+        int mm = (pr.Id % 12) + 1, dd = (pr.Id % 27) + 1, seq = (male ? 5000 : 0) + (pr.Id % 900);
+        pr.IdNo = GenSaId(DateTime.Now.Year - age, mm, dd, seq);
+        pr.HomeAffairs = pr.Name.ToLower().Contains("botha") ? "Mismatch" : "Verified";
+    }
     db.SaveChanges();
 }
 
@@ -424,11 +451,13 @@ app.MapGet("/api/integrations/rica", (string? name) => { name ??= ""; bool ok = 
 // Home Affairs ID validation (Addendum: the producer's ID number must be validated against Home Affairs)
 app.MapGet("/api/integrations/home-affairs", (string? id, string? name) => {
     id ??= ""; name ??= "";
-    bool fmt = id.Length == 13 && id.All(char.IsDigit);
+    var v = ValidateSaId(id);
+    if (!v.ok) return Results.Ok(new { id, name, verified = false, result = "Invalid ID number — " + v.reason, source = "Home Affairs (simulated)" });
     bool nameOk = !name.ToLower().Contains("botha");
-    bool verified = fmt && nameOk;
-    string result = !fmt ? "Invalid ID number — a South African ID must be 13 digits" : (nameOk ? "ID verified — registered in the producer's name" : "Name does not match the ID — manual check required");
-    return Results.Ok(new { id, name, verified, result, source = "Home Affairs (simulated)" });
+    string result = nameOk
+        ? $"ID verified — {v.gender}, born {v.dob}, {v.citizen}; registered in the producer's name"
+        : "ID is valid but the name does not match the record — manual check required";
+    return Results.Ok(new { id, name, verified = nameOk, result, dob = v.dob, gender = v.gender, citizen = v.citizen, source = "Home Affairs (simulated)" });
 });
 app.MapGet("/api/integrations/extension-directory", () => Results.Ok(new[] { new { name = "M. Sitali", role = "Extension Officer", prov = "KZN", cell = "082 000 0001" }, new { name = "J. Ngaka", role = "Extension Officer", prov = "LP", cell = "082 000 0002" }, new { name = "T. Mothibi", role = "Extension Officer", prov = "MP", cell = "082 000 0003" } }));
 app.MapPost("/api/integrations/sms", async (SmsReq r) => Results.Ok(await SendSms(r.to ?? "", r.body ?? r.message ?? "Test message from e-PSS (e-Voucher).")));
