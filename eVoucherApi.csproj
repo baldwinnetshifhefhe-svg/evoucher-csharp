@@ -10,6 +10,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <!-- Production (tender-mandated) database. Activated at runtime only when a SQL Server
+         connection string is supplied (env SQLSERVER_CONNECTION); SQLite stays the default. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
   </ItemGroup>
 
 </Project>

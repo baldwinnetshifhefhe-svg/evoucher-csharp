@@ -10,7 +10,15 @@ using System.Text;
 using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDbContext<AppDb>(o => o.UseSqlite("Data Source=evoucher.db"));
+// Database: production uses MS SQL Server (the tender-mandated engine) when a connection
+// string is supplied via env SQLSERVER_CONNECTION (or appsettings ConnectionStrings:Default);
+// otherwise it falls back to local SQLite for development/demo. Switching is just an env var.
+var sqlServerConn = Environment.GetEnvironmentVariable("SQLSERVER_CONNECTION")
+                    ?? builder.Configuration.GetConnectionString("Default");
+if (!string.IsNullOrWhiteSpace(sqlServerConn))
+    builder.Services.AddDbContext<AppDb>(o => o.UseSqlServer(sqlServerConn));
+else
+    builder.Services.AddDbContext<AppDb>(o => o.UseSqlite("Data Source=evoucher.db"));
 var app = builder.Build();
 var sessions = new System.Collections.Concurrent.ConcurrentDictionary<string, long>();  // token -> issued epoch ms
 
