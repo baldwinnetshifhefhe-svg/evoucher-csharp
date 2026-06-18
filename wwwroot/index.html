@@ -421,13 +421,16 @@ function openAddBeneficiary(){
     <div class="field"><label>Enterprise</label><input id="b_ent" placeholder="e.g. Maize · 3ha"></div>
     <div class="row"><div class="field"><label>Gender·Age</label><input id="b_demo" placeholder="e.g. M·38"></div>
     <div class="field"><label>Cellphone</label><input id="b_cell" placeholder="e.g. 082 000 0000"></div></div>
-    <div class="note">RICA status is checked <b>automatically</b> via the RICA integration when you save (ToR 4.14).</div>`,
+    <div class="field"><label>ID number</label><input id="b_idno" placeholder="13-digit South African ID number" maxlength="13"></div>
+    <div class="note"><b>RICA</b> and the producer's <b>Home Affairs ID</b> are verified <b>automatically</b> when you save (ToR 4.14 · Addendum).</div>`,
     "Add beneficiary",async()=>{
       const name=$('b_name').value.trim();if(!name){toast('Enter a name');return;}
+      const idno=($('b_idno').value||'').trim();
       const rica=await api('/integrations/rica?name='+encodeURIComponent(name)+'&cell='+encodeURIComponent($('b_cell').value||''));
-      await api('/producers','POST',{name,prov:$('b_prov').value,dist:$('b_dist').value,ent:$('b_ent').value,rica:rica.verified?'Verified':'Mismatch',demo:$('b_demo').value});
+      const ha=await api('/integrations/home-affairs?id='+encodeURIComponent(idno)+'&name='+encodeURIComponent(name));
+      await api('/producers','POST',{name,prov:$('b_prov').value,dist:$('b_dist').value,ent:$('b_ent').value,rica:rica.verified?'Verified':'Mismatch',demo:$('b_demo').value,idNo:idno,homeAffairs:ha.verified?'Verified':'Mismatch'});
       closeModal();await reload();
-      toast(rica.verified?('✅ Saved · RICA verified: '+name):('⚠️ Saved · RICA MISMATCH for '+name+' — flagged'));
+      toast((rica.verified?'✅ RICA verified':'⚠️ RICA mismatch')+' · '+(ha.verified?'✅ Home Affairs ID verified':'⚠️ Home Affairs: '+ha.result)+' — '+name,6000);
     });
 }
 async function removeBeneficiary(id){const p=STATE.producers.find(x=>x.id===id);if(!p)return;if(confirm('Remove beneficiary "'+p.name+'"? This deletes it from the database.')){await api('/producers/'+id,'DELETE');await reload();toast('🗑 Removed: '+p.name);}}
@@ -571,6 +574,8 @@ const VIEWS={
       <div class="fact"><div class="fk">Total value</div><div class="fv">${money(total)}</div></div>
       <div class="fact"><div class="fk">Redeemed</div><div class="fv">${vs.filter(v=>v.status==='Redeemed').length}</div></div>
       <div class="fact"><div class="fk">RICA status</div><div class="fv">${p.rica}</div></div>
+      <div class="fact"><div class="fk">ID number</div><div class="fv">${p.idNo||'—'}</div></div>
+      <div class="fact"><div class="fk">Home Affairs</div><div class="fv">${p.homeAffairs||'—'}</div></div>
     </div>
     <div class="row">
       <div class="panel"><h3>Vouchers</h3>${vs.length?voucherTable(vs):`<p style="color:var(--muted);font-size:13px">No vouchers yet. Issue one from the Voucher Issuance page.</p>`}</div>

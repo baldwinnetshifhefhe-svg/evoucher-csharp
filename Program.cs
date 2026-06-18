@@ -164,6 +164,10 @@ using (var scope = app.Services.CreateScope())
     if (!db.Producers.Any(p => p.Phone == "+27722859144"))
         db.Producers.Add(new Producer { Name = "Miss Mukundi Luvhengo", Prov = "LP", Dist = "Vhembe", Ent = "Maize 3ha", Status = "Active", Rica = "Verified", Demo = "F·29", Email = "mukundi.luvhengo@example.co.za", Phone = "+27722859144" });
     db.SaveChanges();
+    // seed a simulated Home Affairs ID number for any producer missing one (Addendum: compulsory ID + Home Affairs validation)
+    foreach (var pr in db.Producers.Where(x => string.IsNullOrEmpty(x.IdNo)).ToList())
+    { pr.IdNo = (8500000000000L + pr.Id).ToString(); pr.HomeAffairs = pr.Name.ToLower().Contains("botha") ? "Mismatch" : "Verified"; }
+    db.SaveChanges();
 }
 
 // ============================ API ENDPOINTS ==================================
@@ -417,6 +421,15 @@ app.MapPost("/api/integrations/farmer-register/sync", (AppDb db) =>
 });
 app.MapGet("/api/integrations/dss", (string? prov) => { prov ??= "national"; var lv = new[] { "Low", "Watch", "Medium", "High" }; int i = prov.Sum(ch => ch) % lv.Length; return Results.Ok(new { prov, risk = lv[i], rainfall_mm = i * 7 + 3, advisory = i >= 2 ? "Dry spell expected — advise water-wise inputs" : "Conditions favourable for planting", source = "DSS (simulated)" }); });
 app.MapGet("/api/integrations/rica", (string? name) => { name ??= ""; bool ok = !name.ToLower().Contains("botha"); return Results.Ok(new { name, verified = ok, result = ok ? "Number registered in the producer's name" : "Name mismatch — manual check required", source = "RICA (simulated)" }); });
+// Home Affairs ID validation (Addendum: the producer's ID number must be validated against Home Affairs)
+app.MapGet("/api/integrations/home-affairs", (string? id, string? name) => {
+    id ??= ""; name ??= "";
+    bool fmt = id.Length == 13 && id.All(char.IsDigit);
+    bool nameOk = !name.ToLower().Contains("botha");
+    bool verified = fmt && nameOk;
+    string result = !fmt ? "Invalid ID number — a South African ID must be 13 digits" : (nameOk ? "ID verified — registered in the producer's name" : "Name does not match the ID — manual check required");
+    return Results.Ok(new { id, name, verified, result, source = "Home Affairs (simulated)" });
+});
 app.MapGet("/api/integrations/extension-directory", () => Results.Ok(new[] { new { name = "M. Sitali", role = "Extension Officer", prov = "KZN", cell = "082 000 0001" }, new { name = "J. Ngaka", role = "Extension Officer", prov = "LP", cell = "082 000 0002" }, new { name = "T. Mothibi", role = "Extension Officer", prov = "MP", cell = "082 000 0003" } }));
 app.MapPost("/api/integrations/sms", async (SmsReq r) => Results.Ok(await SendSms(r.to ?? "", r.body ?? r.message ?? "Test message from e-PSS (e-Voucher).")));
 app.MapGet("/api/integrations/sms-status", async (string? id) => Results.Ok(await SmsStatus(id ?? "")));
@@ -428,7 +441,7 @@ var port = Environment.GetEnvironmentVariable("PORT") ?? "5005";
 app.Run($"http://0.0.0.0:{port}");
 
 // ============================ DATA MODELS ===================================
-public class Producer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Ent { get; set; } = ""; public string Status { get; set; } = "Active"; public string Rica { get; set; } = "Verified"; public string Demo { get; set; } = ""; public string Email { get; set; } = ""; public string Phone { get; set; } = ""; }
+public class Producer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Ent { get; set; } = ""; public string Status { get; set; } = "Active"; public string Rica { get; set; } = "Verified"; public string Demo { get; set; } = ""; public string Email { get; set; } = ""; public string Phone { get; set; } = ""; public string IdNo { get; set; } = ""; public string HomeAffairs { get; set; } = "Verified"; }
 public class Package { public int Id { get; set; } public string Name { get; set; } = ""; public int Val { get; set; } public string Items { get; set; } = ""; public string Status { get; set; } = "Active"; }
 public class Voucher { public int Id { get; set; } public string No { get; set; } = ""; public string Who { get; set; } = ""; public string Prov { get; set; } = ""; public string Pkg { get; set; } = ""; public int Val { get; set; } public string Status { get; set; } = ""; public string Otp { get; set; } = ""; public string Dealer { get; set; } = ""; public string Created { get; set; } = ""; [JsonPropertyName("redeemed_at")] public string RedeemedAt { get; set; } = ""; public string Expiry { get; set; } = ""; [JsonPropertyName("confirm_code")] public string ConfirmCode { get; set; } = ""; [JsonPropertyName("confirmed_at")] public string ConfirmedAt { get; set; } = ""; [JsonPropertyName("confirm_status")] public string ConfirmStatus { get; set; } = ""; }
 public class Dealer { public int Id { get; set; } public string Name { get; set; } = ""; public string Prov { get; set; } = ""; public string Dist { get; set; } = ""; public string Contact { get; set; } = ""; public string Status { get; set; } = "Active"; [JsonPropertyName("company_reg")] public string CompanyReg { get; set; } = ""; public string Vat { get; set; } = ""; public string Csd { get; set; } = ""; public string Bank { get; set; } = ""; public string Address { get; set; } = ""; public string Email { get; set; } = ""; public string Phone { get; set; } = ""; public string Catalogue { get; set; } = ""; }
