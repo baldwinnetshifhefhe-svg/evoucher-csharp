@@ -13,6 +13,9 @@
     <!-- Production (tender-mandated) database. Activated at runtime only when a SQL Server
          connection string is supplied (env SQLSERVER_CONNECTION); SQLite stays the default. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+    <!-- Pin a newer SqlClient: the version EF Core 8.0.10 pulls in (5.1.x) segfaults on
+         Linux (Render) when connecting to Azure SQL over TLS. 5.2.x fixes that crash. -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
   </ItemGroup>
 
 </Project>
