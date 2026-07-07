@@ -159,7 +159,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 <script>
 const $=id=>document.getElementById(id);
 const STATE={me:null,token:null,cur:'benef'};
-const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[],packages:[]};
+const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[],packages:[],applications:[]};
 const PROV={KZN:'KwaZulu-Natal',GP:'Gauteng',LP:'Limpopo',FS:'Free State',MP:'Mpumalanga',EC:'Eastern Cape',WC:'Western Cape',NC:'Northern Cape',NW:'North West'};
 const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json','x-auth-token':STATE.token||''},body:b?JSON.stringify(b):undefined}).then(r=>{if(r.status===401&&url!=='/login'){logout();toast('🔒 Session ended — sign in again');}return r.json();});
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
@@ -178,12 +178,12 @@ function roleLabel(r){return {national:'National Superuser',provincial:'Provinci
 
 async function loadAll(){
   $('kpis').innerHTML='<div class="spin"></div>';
-  const [producers,vouchers,dealers,grievances,payments,users,confirmation,packages]=await Promise.all([
+  const [producers,vouchers,dealers,grievances,payments,users,confirmation,packages,applications]=await Promise.all([
     api('/producers'),api('/vouchers'),api('/dealers'),api('/grievances'),
-    api('/payments'),api('/users').catch(()=>[]),api('/oversight/confirmation').catch(()=>[]),api('/packages').catch(()=>[])
+    api('/payments'),api('/users').catch(()=>[]),api('/oversight/confirmation').catch(()=>[]),api('/packages').catch(()=>[]),api('/applications').catch(()=>[])
   ]);
   DATA.producers=producers||[];DATA.vouchers=vouchers||[];DATA.dealers=dealers||[];
-  DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];DATA.packages=packages||[];
+  DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];DATA.packages=packages||[];DATA.applications=applications||[];
   renderCommand();
 }
 
@@ -226,7 +226,7 @@ function pillFor(status){const s=(status||'').toLowerCase();let c='mut';if(/acti
 /* ---------- workspace defs ---------- */
 const WS={
  benef:{ic:'🧑‍🌾',cls:'t-benef',col:'var(--c-benef)',name:'Beneficiaries',desc:"Who gets support — and proving they're real.",
-   pages:[['Producer Register','All producers, scoped by area'],['Applications','Recommend → approve'],['Targeted Distribution','Issue to a group at once'],['ID / RICA / Home Affairs','Identity validation']],
+   pages:[['Producer Register','All producers, scoped by area',"ws('benef')"],['Applications','Recommend → approve',"openApplications()"],['Targeted Distribution','Issue to a group at once',"formDistribute()"],['ID / RICA / Home Affairs','Identity validation']],
    cols:['Producer','Province','District','Status','ID / RICA'],
    row:p=>[p.name,PROV[p.prov]||p.prov,p.dist,pillFor(p.status),pillFor(p.homeAffairs||p.rica)],
    data:()=>DATA.producers,rec:'producer'},
@@ -264,7 +264,7 @@ function ws(key){
   const band=$('wsband');band.className='band '+w.cls;band.style.background='linear-gradient(100deg,'+w.col+',rgba(0,0,0,.28))';
   const acts={benef:'<button class="btn g" onclick="formAddProducer()">+ Add producer</button>',vouch:'<button class="btn g" onclick="formIssueVoucher()">+ Issue voucher</button>'};
   $('wsactions').innerHTML=acts[key]||'';
-  $('wspages').innerHTML=w.pages.map(p=>`<div class="pc"><div class="t">${p[0]}</div><div class="d">${p[1]}</div></div>`).join('');
+  $('wspages').innerHTML=w.pages.map(p=>`<div class="pc"${p[2]?` onclick="${p[2]}" style="cursor:pointer"`:''}><div class="t">${p[0]}${p[2]?' <span style="color:var(--green2)">→</span>':''}</div><div class="d">${p[1]}</div></div>`).join('');
   const rows=w.data();
   let h='<tr>'+w.cols.map(c=>'<th>'+c+'</th>').join('')+'</tr>';
   if(!rows.length)h+=`<tr><td colspan="${w.cols.length}" style="color:var(--mut);padding:18px">No records yet.</td></tr>`;
@@ -377,6 +377,41 @@ function doDispute(id,no){
 }
 async function approveDealer(id,name){const r=await api('/dealers/'+id+'/approve','POST',{});if(r&&r.error){toast('❌ '+r.error);return;}await loadAll();ws('supp');toast('✅ Dealer accredited: '+name);}
 async function resolveGrievance(id,ref){const r=await api('/grievances/'+id+'/resolve','POST',{});if(r&&r.error){toast('❌ '+r.error);return;}await loadAll();ws('over');toast('✅ '+ref+' marked resolved');}
+
+/* ---- Applications (recommend -> approve, separation of duties) ---- */
+function openApplications(){
+  go('workspace','benef');
+  const A=DATA.applications;
+  $('wstabletitle').innerHTML='Applications — district <b>recommends</b>, a different official <b>approves</b> (separation of duties) · '+A.length+' application(s)';
+  let h='<tr><th>Applicant</th><th>Province</th><th>District</th><th>Demographic</th><th>Status</th><th>Action</th></tr>';
+  if(!A.length)h+='<tr><td colspan="6" style="color:var(--mut);padding:16px">No applications.</td></tr>';
+  A.forEach(a=>{
+    let act='';
+    if(a.status==='Applied')act=`<button class="btn sm" onclick="appRecommend(${a.id})">Recommend</button> <button class="btn sm danger" onclick="appReject(${a.id})">Reject</button>`;
+    else if(a.status==='Recommended')act=`<button class="btn sm" onclick="appApprove(${a.id})">Approve</button> <span style="color:var(--mut);font-size:11px">rec. by ${a.recommended_by||'—'}</span>`;
+    else act=`<span style="color:var(--mut);font-size:11px">${a.status==='Approved'?'by '+(a.approved_by||'—'):(a.reason||'')}</span>`;
+    h+=`<tr><td>${a.name}</td><td>${PROV[a.prov]||a.prov}</td><td>${a.dist}</td><td>${a.demo||'—'}</td><td>${pillFor(a.status)}</td><td>${act}</td></tr>`;
+  });
+  $('wstable').innerHTML=h;
+}
+async function appRecommend(id){const r=await api('/applications/'+id+'/recommend','POST',{by:STATE.me.name});if(r&&r.error){toast('❌ '+r.error);return;}await loadAll();toast('✓ Application recommended');openApplications();}
+async function appApprove(id){const r=await api('/applications/'+id+'/approve','POST',{by:STATE.me.name});if(r&&r.error){toast('❌ '+r.error);return;}await loadAll();toast('✅ Approved & added to the producer register');openApplications();}
+function appReject(id){openForm('Reject application',`<label>Reason</label><input id="f_rej" placeholder="e.g. outside target area">`,'Reject',async()=>{const r=await api('/applications/'+id+'/reject','POST',{by:STATE.me.name,reason:($('f_rej').value||'').trim()});if(r&&r.error){toast('❌ '+r.error);return;}closeModal();await loadAll();toast('Application rejected');openApplications();});}
+
+/* ---- Targeted distribution (issue to a matching group at once) ---- */
+function formDistribute(){
+  const kOpts=DATA.packages.map(k=>`<option>${k.name}</option>`).join('');
+  openForm('Targeted distribution',
+   `<label>Package to distribute</label><select id="d_pkg">${kOpts||'<option value="">(no packages)</option>'}</select>
+    <label>Province</label><select id="d_prov"><option value="">All provinces</option>${provOptions('')}</select>
+    <label>Filter</label><select id="d_youth"><option value="">Everyone matching</option><option value="1">Youth only (under 35)</option></select>
+    <p class="sub" style="margin-top:10px">Issues one voucher to every matching producer who doesn't already have an active one for this package.</p>`,
+   'Distribute now', async()=>{
+     const r=await api('/distribute','POST',{pkg:$('d_pkg').value,prov:$('d_prov').value||null,youth:$('d_youth').value==='1'});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();ws('vouch');toast('✅ Distributed to '+r.count+' producer(s)');
+   });
+}
 
 /* ---------- navigation ---------- */
 function go(id,wskey,i,recname){
