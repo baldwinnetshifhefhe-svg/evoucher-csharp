@@ -83,6 +83,14 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 .badge{display:inline-block;background:#e7f3e9;color:#1b7a3d;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;margin-left:8px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22271f;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:99;opacity:0;transition:.25s}
 .toast.show{opacity:1}
+.btn.sm{padding:7px 13px;font-size:12.5px} .btn.danger{background:var(--c-over)}
+.modalbg{position:fixed;inset:0;background:rgba(20,24,18,.5);display:flex;align-items:center;justify-content:center;z-index:100}
+.modalbox{background:#fff;border-radius:14px;padding:24px;width:min(460px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modalbox h3{margin:0 0 14px;font-size:18px}
+.modalbox label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin:12px 0 5px}
+.modalbox input,.modalbox select{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px}
+.mFoot{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.recact{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .spin{border:3px solid var(--line);border-top-color:var(--green2);border-radius:50%;width:26px;height:26px;animation:sp 1s linear infinite;margin:40px auto}@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -132,7 +140,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 <!-- ZOOM 3 : WORKSPACE -->
 <section class="screen" id="workspace">
   <button class="back" onclick="go('command')">← Back to Command Centre</button>
-  <div class="band" id="wsband"><div class="ic" id="wsic"></div><div><h2 id="wsname"></h2><p id="wsdesc"></p></div></div>
+  <div class="band" id="wsband"><div class="ic" id="wsic"></div><div><h2 id="wsname"></h2><p id="wsdesc"></p></div><div style="flex:1"></div><div id="wsactions"></div></div>
   <div class="pagecards" id="wspages"></div>
   <div class="card"><div class="sect" style="margin-top:0" id="wstabletitle"></div><table id="wstable"></table></div>
 </section>
@@ -145,12 +153,13 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 
 </div>
 
+<div class="modalbg hidden" id="modal"><div class="modalbox"><h3 id="mTitle"></h3><div id="mBody"></div><div class="mFoot"><button class="back" onclick="closeModal()" style="margin:0">Cancel</button><button class="btn" id="mSave">Save</button></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 const $=id=>document.getElementById(id);
 const STATE={me:null,token:null,cur:'benef'};
-const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[]};
+const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[],packages:[]};
 const PROV={KZN:'KwaZulu-Natal',GP:'Gauteng',LP:'Limpopo',FS:'Free State',MP:'Mpumalanga',EC:'Eastern Cape',WC:'Western Cape',NC:'Northern Cape',NW:'North West'};
 const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json','x-auth-token':STATE.token||''},body:b?JSON.stringify(b):undefined}).then(r=>{if(r.status===401&&url!=='/login'){logout();toast('🔒 Session ended — sign in again');}return r.json();});
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
@@ -169,12 +178,12 @@ function roleLabel(r){return {national:'National Superuser',provincial:'Provinci
 
 async function loadAll(){
   $('kpis').innerHTML='<div class="spin"></div>';
-  const [producers,vouchers,dealers,grievances,payments,users,confirmation]=await Promise.all([
+  const [producers,vouchers,dealers,grievances,payments,users,confirmation,packages]=await Promise.all([
     api('/producers'),api('/vouchers'),api('/dealers'),api('/grievances'),
-    api('/payments'),api('/users').catch(()=>[]),api('/oversight/confirmation').catch(()=>[])
+    api('/payments'),api('/users').catch(()=>[]),api('/oversight/confirmation').catch(()=>[]),api('/packages').catch(()=>[])
   ]);
   DATA.producers=producers||[];DATA.vouchers=vouchers||[];DATA.dealers=dealers||[];
-  DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];
+  DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];DATA.packages=packages||[];
   renderCommand();
 }
 
@@ -253,6 +262,8 @@ function ws(key){
   const w=WS[key];STATE.cur=key;
   $('wsic').textContent=w.ic;$('wsname').innerHTML=w.name;$('wsdesc').innerHTML=w.desc;
   const band=$('wsband');band.className='band '+w.cls;band.style.background='linear-gradient(100deg,'+w.col+',rgba(0,0,0,.28))';
+  const acts={benef:'<button class="btn g" onclick="formAddProducer()">+ Add producer</button>',vouch:'<button class="btn g" onclick="formIssueVoucher()">+ Issue voucher</button>'};
+  $('wsactions').innerHTML=acts[key]||'';
   $('wspages').innerHTML=w.pages.map(p=>`<div class="pc"><div class="t">${p[0]}</div><div class="d">${p[1]}</div></div>`).join('');
   const rows=w.data();
   let h='<tr>'+w.cols.map(c=>'<th>'+c+'</th>').join('')+'</tr>';
@@ -279,15 +290,21 @@ const REC={
    <table><tr><th>Voucher</th><th>Package</th><th>Status</th></tr>${mine.map((v,ix)=>`<tr class="click" onclick="rec('vouch',${DATA.vouchers.indexOf(v)})"><td>${v.no}</td><td>${v.pkg}</td><td>${pillFor(v.status)}</td></tr>`).join('')||'<tr><td colspan=3 style="color:var(--mut)">None yet.</td></tr>'}</table>
    <div style="margin-top:12px">${kv('Entitlement',p.ent||'—')}</div></div></div>`;},
  voucher:v=>{const steps=[['Issued','done',(v.pkg||'')+' · R '+fmt(v.val),v.created],['Redeemed at dealer',/redeem|confirm|paid|clos/i.test(v.status)?'done':'pend',v.dealer||'—',v.redeemed_at],['Farmer confirmed',/confirm/i.test(v.confirm_status)?'done':(/disput/i.test(v.confirm_status)?'pend':'pend'),/disput/i.test(v.confirm_status)?'⚠ Disputed':(v.confirm_status||'Awaiting'),v.confirmed_at],['Reconciled &amp; closed',/clos/i.test(v.status)?'done':'pend','Nightly reconciliation','']];
-   return bandR('t-vouch','var(--c-vouch)','🎟️','Voucher #'+v.no,'Full lifecycle · producer, dealer &amp; confirmation')+`
+   let acts='';
+   if(!/redeem|confirm|paid|clos/i.test(v.status))acts+=`<button class="btn" onclick="doRedeem(${v.id},'${v.no}')">🏪 Redeem (enter OTP)</button>`;
+   else if(/redeem/i.test(v.status)&&!/confirm/i.test(v.confirm_status)&&!/disput/i.test(v.confirm_status)){acts+=`<button class="btn" onclick="doConfirm(${v.id},'${v.no}')">✓ Farmer confirm receipt</button><button class="btn danger" onclick="doDispute(${v.id},'${v.no}')">⚠ Dispute</button>`;}
+   return bandR('t-vouch','var(--c-vouch)','🎟️','Voucher #'+v.no,'Full lifecycle · producer, dealer &amp; confirmation')+
+   (acts?`<div class="recact">${acts}</div>`:'')+`
    <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Voucher lifecycle</div><ul class="tl">
    ${steps.map((s,ix)=>`<li class="${s[1]}"><span class="n">${ix+1}</span><b>${s[0]}</b><small>${s[2]||''}${s[3]?' · '+s[3]:''}</small></li>`).join('')}</ul></div>
    <div><div class="card"><div class="sect" style="margin-top:0">Details</div>${kv('Beneficiary',v.who)}${kv('Province',PROV[v.prov]||v.prov)}${kv('Package',v.pkg)}${kv('Value','R '+fmt(v.val))}${kv('OTP',v.otp||'—')}${kv('Confirm code',v.confirm_code||'—')}${kv('Expiry',v.expiry||'—')}${kv('Status',pillFor(v.status))}</div></div></div>`;},
  dealer:d=>{const paid=DATA.payments.filter(p=>p.supplier===d.name);const owed=paid.filter(p=>!/paid/i.test(p.status)).reduce((s,p)=>s+(+p.amount||0),0);
-   return bandR('t-supp','var(--c-supp)','🏪',d.name,'Agro-dealer profile · accreditation &amp; payments')+`
+   const dacts=/pend/i.test(d.status)?`<div class="recact"><button class="btn" onclick="approveDealer(${d.id},'${d.name.replace(/'/g,"")}')">✓ Accredit dealer</button></div>`:'';
+   return bandR('t-supp','var(--c-supp)','🏪',d.name,'Agro-dealer profile · accreditation &amp; payments')+dacts+`
    <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Accreditation</div>${kv('Dealer',d.name)}${kv('Status',pillFor(d.status))}${kv('Province · District',(PROV[d.prov]||d.prov)+' · '+(d.dist||'—'))}${kv('Company reg',d.company_reg||'—')}${kv('VAT',d.vat||'—')}${kv('CSD',d.csd||'—')}${kv('Bank',d.bank||'—')}${kv('Contact',(d.contact||d.phone||'—'))}</div>
    <div class="card"><div class="sect" style="margin-top:0">Payments (${paid.length})</div>${kv('Outstanding','R '+fmt(owed))}<table style="margin-top:8px"><tr><th>Voucher</th><th>Amount</th><th>Status</th></tr>${paid.map(p=>`<tr><td>${p.voucher_no}</td><td>R ${fmt(p.amount)}</td><td>${pillFor(p.status)}</td></tr>`).join('')||'<tr><td colspan=3 style="color:var(--mut)">No payments yet.</td></tr>'}</table></div></div>`;},
- grievance:g=>bandR('t-over','var(--c-over)','🛡️',g.ref,'Grievance / integrity case')+`
+ grievance:g=>bandR('t-over','var(--c-over)','🛡️',g.ref,'Grievance / integrity case')+
+   (/open|investig/i.test(g.status)?`<div class="recact"><button class="btn" onclick="resolveGrievance(${g.id},'${g.ref}')">✓ Mark resolved</button></div>`:'')+`
    <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Case detail</div>${kv('Reference',g.ref)}${kv('Beneficiary',g.who)}${kv('Issue',g.issue)}${kv('Status',pillFor(g.status))}${kv('Opened',g.created)}</div>
    <div class="card"><div class="sect" style="margin-top:0">Tamper-evident audit</div>${kv('Chain status','<span style="color:#1b7a3d">✓ Verified</span>')}<div style="margin-top:8px" class="hash">sha256(prev | ts | actor | event)<br>every action on this case is hash-chained.</div></div></div>`,
  payment:p=>bandR('t-mon','var(--c-mon)','📊',p.ref||('Payment '+p.voucher_no),'Disbursement record')+`
@@ -295,6 +312,71 @@ const REC={
  user:u=>bandR('t-admin','var(--c-admin)','⚙️',u.name,'User &amp; access record')+`
    <div class="card" style="max-width:560px">${kv('Name',u.name)}${kv('Role',roleLabel(u.role))}${kv('Scope',u.scope||'—')}${kv('Username',u.username||'—')}</div>`,
 };
+
+/* ---------- actions (write to the live API) ---------- */
+function openForm(title,bodyHTML,saveLabel,onSave){$('mTitle').textContent=title;$('mBody').innerHTML=bodyHTML;$('mSave').textContent=saveLabel||'Save';$('mSave').onclick=onSave;$('modal').classList.remove('hidden');}
+function closeModal(){$('modal').classList.add('hidden');}
+function provOptions(sel){return Object.entries(PROV).map(([k,v])=>`<option value="${k}"${k===sel?' selected':''}>${v}</option>`).join('');}
+
+function formAddProducer(){
+  openForm('Add producer',
+   `<label>Full name</label><input id="f_name">
+    <label>Province</label><select id="f_prov">${provOptions('KZN')}</select>
+    <label>District</label><input id="f_dist">
+    <label>ID number</label><input id="f_id">
+    <label>Cellphone</label><input id="f_phone">
+    <label>Entitlement (e.g. Maize 2ha)</label><input id="f_ent">`,
+   'Add producer', async()=>{
+     const name=($('f_name').value||'').trim(); if(!name){toast('Name required');return;}
+     const r=await api('/producers','POST',{name,prov:$('f_prov').value,dist:($('f_dist').value||'').trim(),idNo:($('f_id').value||'').trim(),phone:($('f_phone').value||'').trim(),ent:($('f_ent').value||'').trim()});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();ws('benef');toast('✅ Producer added: '+name);
+   });
+}
+function formIssueVoucher(){
+  if(!DATA.producers.length){toast('Add a producer first');return;}
+  const pOpts=DATA.producers.map(p=>`<option>${p.name}</option>`).join('');
+  const kOpts=DATA.packages.map(k=>`<option>${k.name}</option>`).join('');
+  openForm('Issue voucher',
+   `<label>Beneficiary (producer)</label><select id="f_who">${pOpts}</select>
+    <label>Subsidy package</label><select id="f_pkg">${kOpts||'<option value="">(no packages defined)</option>'}</select>`,
+   'Issue voucher', async()=>{
+     const r=await api('/vouchers','POST',{who:$('f_who').value,pkg:$('f_pkg').value});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();ws('vouch');toast('✅ Voucher issued'+(r&&r.otp?' — OTP '+r.otp:'')+' — open it to redeem');
+   });
+}
+function doRedeem(id,no){
+  const dOpts=DATA.dealers.filter(d=>/active/i.test(d.status)).map(d=>`<option>${d.name}</option>`).join('');
+  openForm('Redeem voucher '+no,
+   `<label>OTP (shown on the voucher / farmer's SMS)</label><input id="f_otp">
+    <label>Dealer</label><select id="f_dealer">${dOpts||'<option>AgriMart Tshwane</option>'}</select>`,
+   'Redeem', async()=>{
+     const r=await api('/vouchers/'+id+'/redeem','POST',{otp:($('f_otp').value||'').trim(),dealer:$('f_dealer').value});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();ws('vouch');toast('✅ '+no+' redeemed — R'+r.paid+' paid to supplier ('+r.ref+'). Farmer confirm code: '+r.confirm_code);
+   });
+}
+function doConfirm(id,no){
+  openForm('Farmer confirms receipt — '+no,
+   `<label>Confirmation code (from the farmer's SMS)</label><input id="f_code"><p class="sub" style="margin-top:10px">Only the farmer who received the goods has this code — this is the proof of delivery.</p>`,
+   'Confirm receipt', async()=>{
+     const r=await api('/vouchers/'+id+'/confirm','POST',{code:($('f_code').value||'').trim()});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();ws('vouch');toast('✅ '+no+' — farmer confirmed receipt ✓');
+   });
+}
+function doDispute(id,no){
+  openForm('Dispute voucher '+no,
+   `<label>What went wrong?</label><input id="f_reason" placeholder="e.g. did not receive / short delivery">`,
+   'Log dispute', async()=>{
+     const r=await api('/vouchers/'+id+'/dispute','POST',{reason:($('f_reason').value||'').trim()});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();ws('vouch');toast('⚠ Dispute logged — a grievance was opened for investigation');
+   });
+}
+async function approveDealer(id,name){const r=await api('/dealers/'+id+'/approve','POST',{});if(r&&r.error){toast('❌ '+r.error);return;}await loadAll();ws('supp');toast('✅ Dealer accredited: '+name);}
+async function resolveGrievance(id,ref){const r=await api('/grievances/'+id+'/resolve','POST',{});if(r&&r.error){toast('❌ '+r.error);return;}await loadAll();ws('over');toast('✅ '+ref+' marked resolved');}
 
 /* ---------- navigation ---------- */
 function go(id,wskey,i,recname){
