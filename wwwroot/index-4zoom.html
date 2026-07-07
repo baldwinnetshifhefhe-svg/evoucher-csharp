@@ -91,6 +91,26 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 .modalbox input,.modalbox select{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px}
 .mFoot{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
 .recact{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+/* ---- floating + watery cards ---- */
+.tile,.pc{position:relative;overflow:hidden;box-shadow:0 10px 22px rgba(30,50,20,.10);animation:floaty 5s ease-in-out infinite}
+.tile:nth-child(2),.pc:nth-child(2){animation-delay:.5s}
+.tile:nth-child(3),.pc:nth-child(3){animation-delay:1s}
+.tile:nth-child(4),.pc:nth-child(4){animation-delay:1.5s}
+.tile:nth-child(5),.pc:nth-child(5){animation-delay:2s}
+.tile:nth-child(6),.pc:nth-child(6){animation-delay:2.5s}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+/* hover: lift higher (as its own animation so it beats the float) + aqua glow */
+.tile:hover,.pc:hover{animation:lifted .3s ease forwards;box-shadow:0 20px 44px rgba(21,101,192,.22);z-index:5}
+.tile:hover{background-image:linear-gradient(180deg,rgba(120,200,255,.07),rgba(120,200,255,.13))}
+@keyframes lifted{to{transform:translateY(-12px) scale(1.02)}}
+/* watery shimmer sweep across the card on hover */
+.tile::before,.pc::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(140,210,255,.30) 50%,transparent 65%);transform:translateX(-130%);pointer-events:none;z-index:2}
+.tile:hover::before,.pc:hover::before{animation:watersheen 1.5s ease-in-out infinite}
+@keyframes watersheen{0%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
+/* click ripple (water drop) */
+.ripple{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(120,200,255,.55),rgba(120,200,255,0) 70%);transform:translate(-50%,-50%) scale(0);animation:rip .6s ease-out forwards;pointer-events:none;z-index:3}
+@keyframes rip{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@media(prefers-reduced-motion:reduce){.tile,.pc{animation:none}.tile:hover,.pc:hover{animation:none;transform:translateY(-4px)}}
 .spin{border:3px solid var(--line);border-top-color:var(--green2);border-radius:50%;width:26px;height:26px;animation:sp 1s linear infinite;margin:40px auto}@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -521,6 +541,15 @@ function go(id,wskey,i,recname){
   $('crumbs').innerHTML=c;window.scrollTo(0,0);
 }
 try{setZTheme(localStorage.getItem('zTheme')||'agri')}catch(e){}
+/* water-drop ripple from the click point on any floating card */
+document.addEventListener('click',function(e){
+  var card=e.target.closest('.tile,.pc'); if(!card)return;
+  var rect=card.getBoundingClientRect(), size=Math.max(rect.width,rect.height)*1.1;
+  var r=document.createElement('span'); r.className='ripple';
+  r.style.width=r.style.height=size+'px';
+  r.style.left=(e.clientX-rect.left)+'px'; r.style.top=(e.clientY-rect.top)+'px';
+  card.appendChild(r); setTimeout(function(){r.remove();},650);
+},true);
 // auto-login convenience for preview left off; user clicks Sign in
 </script>
 </body>
