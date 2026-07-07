@@ -159,7 +159,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 <script>
 const $=id=>document.getElementById(id);
 const STATE={me:null,token:null,cur:'benef'};
-const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[],packages:[],applications:[]};
+const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[],packages:[],applications:[],messages:[],feedback:[]};
 const PROV={KZN:'KwaZulu-Natal',GP:'Gauteng',LP:'Limpopo',FS:'Free State',MP:'Mpumalanga',EC:'Eastern Cape',WC:'Western Cape',NC:'Northern Cape',NW:'North West'};
 const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json','x-auth-token':STATE.token||''},body:b?JSON.stringify(b):undefined}).then(r=>{if(r.status===401&&url!=='/login'){logout();toast('🔒 Session ended — sign in again');}return r.json();});
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
@@ -178,12 +178,13 @@ function roleLabel(r){return {national:'National Superuser',provincial:'Provinci
 
 async function loadAll(){
   $('kpis').innerHTML='<div class="spin"></div>';
-  const [producers,vouchers,dealers,grievances,payments,users,confirmation,packages,applications]=await Promise.all([
+  const [producers,vouchers,dealers,grievances,payments,users,confirmation,packages,applications,messages,feedback]=await Promise.all([
     api('/producers'),api('/vouchers'),api('/dealers'),api('/grievances'),
-    api('/payments'),api('/users').catch(()=>[]),api('/oversight/confirmation').catch(()=>[]),api('/packages').catch(()=>[]),api('/applications').catch(()=>[])
+    api('/payments'),api('/users').catch(()=>[]),api('/oversight/confirmation').catch(()=>[]),api('/packages').catch(()=>[]),api('/applications').catch(()=>[]),
+    api('/messages').catch(()=>[]),api('/feedback').catch(()=>[])
   ]);
   DATA.producers=producers||[];DATA.vouchers=vouchers||[];DATA.dealers=dealers||[];
-  DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];DATA.packages=packages||[];DATA.applications=applications||[];
+  DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];DATA.packages=packages||[];DATA.applications=applications||[];DATA.messages=messages||[];DATA.feedback=feedback||[];
   renderCommand();
 }
 
@@ -231,27 +232,27 @@ const WS={
    row:p=>[p.name,PROV[p.prov]||p.prov,p.dist,pillFor(p.status),pillFor(p.homeAffairs||p.rica)],
    data:()=>DATA.producers,rec:'producer'},
  vouch:{ic:'🎟️',cls:'t-vouch',col:'var(--c-vouch)',name:'Vouchers',desc:'Packages, issuance, redemption &amp; confirmation.',
-   pages:[['Subsidy Packages','Bundles of approved inputs'],['Voucher Issuance','Unique no. + OTP'],['Redemptions','OTP redeem at dealer'],['Farmer Confirmation','Confirm / dispute receipt']],
+   pages:[['Subsidy Packages','Bundles of approved inputs',"openPackages()"],['Input Catalogue','Approved items &amp; prices',"openCatalogue()"],['Voucher Issuance','Unique no. + OTP',"formIssueVoucher()"],['Redemptions','OTP redeem at dealer',"openVouchFilter('redeem')"],['Farmer Confirmation','Confirm / dispute receipt',"openVouchFilter('await')"],['Financial-year expiry','No value leaks across budgets',"openVouchFilter('exp')"]],
    cols:['Voucher','Producer','Package','Status','Confirmed'],
    row:v=>[v.no,v.who,v.pkg,pillFor(v.status),pillFor(v.confirm_status||'—')],
    data:()=>DATA.vouchers,rec:'voucher'},
  supp:{ic:'🏪',cls:'t-supp',col:'var(--c-supp)',name:'Suppliers &amp; Payments',desc:'Agro-dealers and paying them fast.',
-   pages:[['Agro-Dealer Directory','Accredited dealers by area'],['Payments','Approve → pay with ref'],['Bank / BAS','Disbursement &amp; reconciliation']],
+   pages:[['Agro-Dealer Directory','Accredited dealers by area',"ws('supp')"],['Payments','Every supplier disbursement',"openPayments()"],['Bank / BAS','Disbursement &amp; reconciliation',"openIntegrations()"]],
    cols:['Dealer','Province','District','Contact','Status'],
    row:d=>[d.name,PROV[d.prov]||d.prov,d.dist,d.contact||d.phone||'—',pillFor(d.status)],
    data:()=>DATA.dealers,rec:'dealer'},
  over:{ic:'🛡️',cls:'t-over',col:'var(--c-over)',name:'Oversight &amp; Integrity',desc:'Confirmation, grievances &amp; audit trail.',
-   pages:[['Confirmation Tracker','Per-dealer confirmed vs disputed'],['Grievances','Log, track &amp; resolve'],['Audit Trail','Tamper-evident hash-chain']],
+   pages:[['Confirmation Tracker','Per-dealer confirmed vs disputed',"openConfirmation()"],['Grievances','Log, track &amp; resolve',"ws('over')"],['Audit Trail','Tamper-evident hash-chain',"openAudit()"]],
    cols:['Ref','Beneficiary','Issue','Status','Opened'],
    row:g=>[g.ref,g.who,g.issue,pillFor(g.status),g.created],
    data:()=>DATA.grievances,rec:'grievance'},
  mon:{ic:'📊',cls:'t-mon',col:'var(--c-mon)',name:'Monitoring &amp; Reports',desc:'Payments, M&amp;E and export.',
-   pages:[['M&amp;E Dashboard','Disaggregated view'],['Payments Ledger','Every disbursement'],['Export','CSV · Excel · PDF']],
+   pages:[['M&amp;E Dashboard','Disaggregated view',"go('command')"],['Payments Ledger','Every disbursement',"openPayments()"],['Export','Download vouchers as CSV',"exportCsv()"]],
    cols:['Voucher','Supplier','Beneficiary','Amount','Status'],
    row:p=>[p.voucher_no,p.supplier,p.who,'R '+fmt(p.amount),pillFor(p.status)],
    data:()=>DATA.payments,rec:'payment'},
  admin:{ic:'⚙️',cls:'t-admin',col:'var(--c-admin)',name:'Administration',desc:'Users, roles &amp; access.',
-   pages:[['Users &amp; Access','Roles &amp; scoping'],['Communications','SMS advisories &amp; OTP'],['Integrations','Farmer Register, BAS…']],
+   pages:[['Users &amp; Access','Roles &amp; scoping',"ws('admin')"],['Communications','SMS / email advisories',"openComms()"],['Integrations','Home Affairs, RICA, DSS, BAS…',"openIntegrations()"],['Feedback','What users think',"openFeedback()"],['Appearance','Switch the theme',"openThemes()"]],
    cols:['Name','Role','Scope','Username'],
    row:u=>[u.name,pillFor(roleLabel(u.role)),u.scope||'—',u.username||'—'],
    data:()=>DATA.users,rec:'user'},
@@ -413,6 +414,101 @@ function formDistribute(){
    });
 }
 
+/* ---- Voucher-workspace panels ---- */
+function openPackages(){panelHead('Subsidy packages — bundles of approved inputs · '+DATA.packages.length+' package(s)');let h='<tr><th>Package</th><th>Value</th><th>Items</th><th>Status</th></tr>';if(!DATA.packages.length)h+='<tr><td colspan="4" style="color:var(--mut);padding:16px">No packages yet.</td></tr>';DATA.packages.forEach(k=>h+=`<tr><td><b>${k.name}</b></td><td>R ${fmt(k.val)}</td><td>${k.items||'—'}</td><td>${pillFor(k.status)}</td></tr>`);$('wstable').innerHTML=h;}
+async function openCatalogue(){panelHead('Input catalogue — loading…');const cat=await api('/catalogue').catch(()=>[]);panelHead('Input catalogue — approved items &amp; prices · '+cat.length+' item(s)');let h='<tr><th>Item</th><th>Category</th><th>Price</th><th>Status</th></tr>';if(!cat.length)h+='<tr><td colspan="4" style="color:var(--mut);padding:16px">No items yet.</td></tr>';cat.forEach(c=>h+=`<tr><td>${c.n}</td><td>${c.c||'—'}</td><td>R ${fmt(c.p)}</td><td>${pillFor(c.s)}</td></tr>`);$('wstable').innerHTML=h;}
+function openVouchFilter(kind){
+  const title=kind==='redeem'?'Redemptions — vouchers redeemed at a dealer':kind==='await'?'Farmer Confirmation — redeemed, awaiting the farmer’s confirmation':'Vouchers by expiry';
+  let list=DATA.vouchers;
+  if(kind==='redeem')list=DATA.vouchers.filter(v=>/redeem|confirm|paid|clos/i.test(v.status));
+  else if(kind==='await')list=DATA.vouchers.filter(v=>/redeem/i.test(v.status)&&!/confirm/i.test(v.confirm_status||''));
+  panelHead(title+' · '+list.length+' voucher(s)');
+  let h='<tr><th>Voucher</th><th>Producer</th><th>Package</th><th>Status</th><th>'+(kind==='exp'?'Expiry':'Confirmed')+'</th></tr>';
+  if(!list.length)h+='<tr><td colspan="5" style="color:var(--mut);padding:16px">None.</td></tr>';
+  list.forEach(v=>{const i=DATA.vouchers.indexOf(v);h+=`<tr class="click" onclick="rec('vouch',${i})"><td>${v.no}</td><td>${v.who}</td><td>${v.pkg}</td><td>${pillFor(v.status)}</td><td>${kind==='exp'?(v.expiry||'—'):pillFor(v.confirm_status||'—')}</td></tr>`;});
+  $('wstable').innerHTML=h;
+}
+/* ---- Suppliers / Oversight / Monitoring panels ---- */
+function openPayments(){panelHead('Payments — every supplier disbursement · '+DATA.payments.length);let h='<tr><th>When</th><th>Supplier</th><th>Voucher</th><th>Amount</th><th>Ref</th><th>Status</th></tr>';if(!DATA.payments.length)h+='<tr><td colspan="6" style="color:var(--mut);padding:16px">No payments yet.</td></tr>';DATA.payments.forEach(p=>h+=`<tr><td>${p.ts}</td><td>${p.supplier}</td><td>${p.voucher_no}</td><td>R ${fmt(p.amount)}</td><td>${p.ref||'—'}</td><td>${pillFor(p.status)}</td></tr>`);$('wstable').innerHTML=h;}
+function openConfirmation(){panelHead('Confirmation tracker — per dealer: redeemed vs farmer-confirmed vs disputed');let h='<tr><th>Dealer</th><th>Redeemed</th><th>Confirmed</th><th>Awaiting</th><th>Disputed</th></tr>';const C=DATA.confirmation||[];if(!C.length)h+='<tr><td colspan="5" style="color:var(--mut);padding:16px">No redemptions yet.</td></tr>';C.forEach(c=>h+=`<tr><td><b>${c.dealer}</b></td><td>${c.redeemed}</td><td style="color:#1b7a3d">${c.confirmed}</td><td style="color:#b06a00">${c.awaiting}</td><td style="color:var(--c-over)">${c.disputed}</td></tr>`);$('wstable').innerHTML=h;}
+async function openAudit(){panelHead('Audit trail — loading…');const [a,v]=await Promise.all([api('/audit').catch(()=>[]),api('/audit/verify').catch(()=>({}))]);const ok=v&&(v.ok||v.intact||v.verified);panelHead('Audit trail — tamper-evident hash chain · '+(ok?'<span style="color:#1b7a3d">✓ chain verified</span>':'<span>'+(a.length)+' events</span>'));let h='<tr><th>When</th><th>Actor</th><th>Event</th></tr>';if(!a.length)h+='<tr><td colspan="3" style="color:var(--mut);padding:16px">No audit events.</td></tr>';a.forEach(e=>h+=`<tr><td style="white-space:nowrap">${e.ts}</td><td>${e.actor}</td><td>${e.event}</td></tr>`);$('wstable').innerHTML=h;}
+
+function exportCsv(){
+  const rows=[['Voucher','Producer','Province','Package','Value','Status','Confirmed','Created','Expiry']];
+  DATA.vouchers.forEach(v=>rows.push([v.no,v.who,PROV[v.prov]||v.prov,v.pkg,v.val,v.status,v.confirm_status||'',v.created,v.expiry]));
+  const csv=rows.map(r=>r.map(x=>`"${(x==null?'':x).toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='evoucher-vouchers.csv';a.click();toast('✅ CSV downloaded ('+DATA.vouchers.length+' vouchers)');
+}
+
+/* ---- Admin panels: Integrations, Communications, Feedback, Themes ---- */
+function panelHead(title){go('workspace',STATE.cur);$('wstabletitle').innerHTML=title;}
+const setRes=(id,txt,ok)=>{const e=$('res_'+id);if(e){e.innerHTML=txt;e.style.color=ok===false?'var(--c-over)':(ok?'#1b7a3d':'var(--mut)');}};
+function openIntegrations(){
+  panelHead('Integrations — the e-Voucher connects to national systems. Click <b>Test</b> to call each one live.');
+  const rows=[
+   ['🆔 Home Affairs','Validates the producer ID number','ha','testHomeAffairs()'],
+   ['📶 RICA','Confirms the SIM is registered to the producer','rica','testRica()'],
+   ['🌦️ DSS','Weather &amp; risk advisory by province','dss','testDss()'],
+   ['👩‍🌾 Farmer Register','Sync producers from the national register','fr','syncFarmerReg()'],
+   ['🏦 BAS','Raise a Treasury disbursement','bas','testBas()'],
+   ['💳 Payment gateway','Supplier payment rail','pg','testGateway()']
+  ];
+  let h='<tr><th>System</th><th>What it does</th><th>Test</th><th>Result</th></tr>';
+  rows.forEach(r=>{h+=`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td><button class="btn sm" onclick="${r[3]}">Test</button></td><td id="res_${r[2]}" style="color:var(--mut)">—</td></tr>`;});
+  $('wstable').innerHTML=h;
+}
+async function testHomeAffairs(){const p=DATA.producers.find(x=>x.idNo)||DATA.producers[0]||{};setRes('ha','checking…');const r=await api('/integrations/home-affairs?id='+encodeURIComponent(p.idNo||'')+'&name='+encodeURIComponent(p.name||''));setRes('ha',(r.verified?'✓ ':'⚠ ')+(r.result||'')+' — '+(p.name||''),r.verified);}
+async function testRica(){const p=DATA.producers[0]||{};setRes('rica','checking…');const r=await api('/integrations/rica?name='+encodeURIComponent(p.name||''));setRes('rica',(r.verified?'✓ ':'⚠ ')+(r.result||''),r.verified);}
+async function testDss(){setRes('dss','checking…');const r=await api('/integrations/dss?prov=KZN');setRes('dss','KZN risk: '+r.risk+' · '+r.advisory,true);}
+async function syncFarmerReg(){setRes('fr','syncing…');const r=await api('/integrations/farmer-register/sync','POST',{});await loadAll();setRes('fr','✓ '+(r.added!=null?r.added+' added':'synced')+(r.total!=null?' · '+r.total+' in register':''),true);}
+async function testBas(){setRes('bas','raising…');const r=await api('/integrations/bas','POST',{});setRes('bas','✓ '+r.status+' ('+r.ref+')',true);}
+async function testGateway(){setRes('pg','calling…');const r=await api('/integrations/gateway','POST',{});setRes('pg','✓ '+r.status+' ('+r.ref+')',true);}
+
+function openComms(){
+  panelHead('Communications — advisories to producers · '+DATA.messages.length+' sent &nbsp; <button class="btn sm" onclick="formSendMessage()">＋ New message</button>');
+  let h='<tr><th>When</th><th>Channel</th><th>Audience</th><th>Subject</th><th>Recipients</th></tr>';
+  if(!DATA.messages.length)h+='<tr><td colspan="5" style="color:var(--mut);padding:16px">No messages yet.</td></tr>';
+  DATA.messages.forEach(m=>{h+=`<tr><td>${m.ts}</td><td>${m.channel}</td><td>${m.audience}</td><td>${m.subject||'—'}</td><td>${m.recipients}</td></tr>`;});
+  $('wstable').innerHTML=h;
+}
+function formSendMessage(){
+  openForm('New advisory',
+   `<label>Channel</label><select id="c_ch"><option>SMS</option><option>Email</option></select>
+    <label>Audience (province)</label><select id="c_prov"><option value="">All provinces</option>${provOptions('')}</select>
+    <label>Subject</label><input id="c_sub">
+    <label>Message</label><input id="c_body">`,
+   'Send', async()=>{
+     const prov=$('c_prov').value;
+     const r=await api('/messages','POST',{channel:$('c_ch').value,audience:prov?(PROV[prov]||prov):'All',prov:prov||null,subject:($('c_sub').value||'').trim(),body:($('c_body').value||'').trim()});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();openComms();toast('✅ Sent to '+r.count+' recipient(s)');
+   });
+}
+function openFeedback(){
+  panelHead('Feedback — what users think · '+DATA.feedback.length+' entries &nbsp; <button class="btn sm" onclick="formFeedback()">＋ Give feedback</button>');
+  let h='<tr><th>When</th><th>Role</th><th>Rating</th><th>Comment</th></tr>';
+  if(!DATA.feedback.length)h+='<tr><td colspan="4" style="color:var(--mut);padding:16px">No feedback yet.</td></tr>';
+  DATA.feedback.forEach(f=>{h+=`<tr><td>${f.ts}</td><td>${f.role}</td><td style="color:var(--gold)">${'★'.repeat(f.rating)}${'☆'.repeat(5-f.rating)}</td><td>${f.comment||''}</td></tr>`;});
+  $('wstable').innerHTML=h;
+}
+function formFeedback(){
+  openForm('Give feedback',
+   `<label>Rating</label><select id="fb_r"><option value="5">★★★★★ Excellent</option><option value="4">★★★★ Good</option><option value="3">★★★ OK</option><option value="2">★★ Poor</option><option value="1">★ Bad</option></select>
+    <label>Comment</label><input id="fb_c">`,
+   'Submit', async()=>{
+     const r=await api('/feedback','POST',{role:roleLabel(STATE.me.role),rating:+$('fb_r').value,comment:($('fb_c').value||'').trim(),by:STATE.me.name});
+     if(r&&r.error){toast('❌ '+r.error);return;}
+     closeModal();await loadAll();openFeedback();toast('✅ Thank you for your feedback');
+   });
+}
+const ZTHEMES={agri:{'--bg':'#f5f3ec','--card':'#fff','--ink':'#22271f','--line':'#e3e0d4','--mut':'#6b7167'},steel:{'--bg':'#b8c1cb','--card':'#f4f5f6','--ink':'#1f2a1f','--line':'#cdd4da','--mut':'#556070'},sand:{'--bg':'#efe7d6','--card':'#fffdf8','--ink':'#2a2419','--line':'#e2d7bf','--mut':'#7a6f57'}};
+function setZTheme(k){const t=ZTHEMES[k]||ZTHEMES.agri;Object.entries(t).forEach(([a,b])=>document.documentElement.style.setProperty(a,b));try{localStorage.setItem('zTheme',k)}catch(e){}}
+function openThemes(){
+  panelHead('Appearance — pick a theme (saved on this device)');
+  const names={agri:'🌿 Agri (default)',steel:'⚙️ Steel',sand:'🏜️ Sand'};
+  $('wstable').innerHTML='<tr><td style="border:0;padding-top:12px">'+Object.keys(ZTHEMES).map(k=>`<button class="btn sm" style="margin-right:8px" onclick="setZTheme('${k}');toast('Theme: '+${JSON.stringify(names[k])})">${names[k]}</button>`).join('')+'</td></tr>';
+}
+
 /* ---------- navigation ---------- */
 function go(id,wskey,i,recname){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
@@ -424,6 +520,7 @@ function go(id,wskey,i,recname){
   if(id==='record')c+=' ▸ <a>'+(recname||'Record')+'</a>';
   $('crumbs').innerHTML=c;window.scrollTo(0,0);
 }
+try{setZTheme(localStorage.getItem('zTheme')||'agri')}catch(e){}
 // auto-login convenience for preview left off; user clicks Sign in
 </script>
 </body>
