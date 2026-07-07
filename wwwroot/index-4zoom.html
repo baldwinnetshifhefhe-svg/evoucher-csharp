@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>e-Voucher · 4-Zoom (live)</title>
+<style>
+:root{
+  --green:#1b5e20;--green2:#2e7d32;--gold:#c79a2c;--bg:#f5f3ec;--card:#fff;--ink:#22271f;--mut:#6b7167;--line:#e3e0d4;
+  --c-benef:#2e7d32;--c-vouch:#c8871a;--c-supp:#1565c0;--c-over:#a1332a;--c-mon:#0f766e;--c-admin:#5b4b8a;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+.stripe{height:6px;background:linear-gradient(90deg,#007a4d 0 33%,#ffb612 33% 66%,#de3831 66% 100%)}
+header{background:linear-gradient(100deg,var(--green),#3c5523);color:#fff;display:flex;align-items:center;gap:14px;padding:12px 22px}
+.crest{width:44px;height:44px;border-radius:50%;background:var(--gold);color:#3b2f1e;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+header h1{font-size:17px;margin:0;font-weight:700} header small{opacity:.85;font-weight:400;display:block;font-size:11px}
+.spacer{flex:1}
+.zbadge{background:rgba(255,255,255,.16);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.user{font-size:12px;text-align:right;opacity:.95;cursor:pointer}
+.crumbs{background:#fff;border-bottom:1px solid var(--line);padding:9px 22px;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.crumbs a{color:var(--green2);font-weight:600;text-decoration:none;cursor:pointer}
+.crumbs .zlbl{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:2px 9px;font-size:11px;color:var(--mut)}
+.wrap{max-width:1180px;margin:0 auto;padding:22px}
+.hidden{display:none!important}
+.screen{display:none;animation:fade .25s} .screen.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h2.page{font-size:22px;margin:0 0 3px} p.sub{color:var(--mut);margin:0 0 18px;font-size:13px}
+.grid{display:grid;gap:16px}
+.k4{grid-template-columns:repeat(4,1fr)} .k3{grid-template-columns:repeat(3,1fr)} .k2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:900px){.k4,.k3,.k2{grid-template-columns:1fr 1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(60,50,20,.05)}
+.kpi{border-top:4px solid var(--green2)} .kpi .n{font-size:30px;font-weight:800;line-height:1} .kpi .l{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-top:6px}
+.kpi.g{border-color:var(--c-benef)} .kpi.y{border-color:var(--c-vouch)} .kpi.b{border-color:var(--c-supp)} .kpi.t{border-color:var(--c-mon)}
+.kpi.g .n{color:var(--c-benef)} .kpi.y .n{color:var(--c-vouch)} .kpi.b .n{color:var(--c-supp)} .kpi.t .n{color:var(--c-mon)}
+.sect{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);font-weight:700;margin:26px 0 10px}
+.bar{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13px}
+.bar .name{width:130px} .bar .track{flex:1;height:12px;background:#e9e6da;border-radius:8px;overflow:hidden}
+.bar .fill{height:100%;background:var(--green2);border-radius:8px}
+.bar .v{width:34px;text-align:right;font-weight:700}
+.flag{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #f0d9d6;background:#fbecea;border-radius:9px;margin-bottom:8px;font-size:13px;cursor:pointer}
+.flag:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c-over);flex-shrink:0}
+.tile{cursor:pointer;border-left:6px solid var(--green2);transition:.15s;display:flex;gap:14px;align-items:flex-start}
+.tile:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.08)}
+.tile .ic{width:46px;height:46px;border-radius:11px;background:var(--green2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.tile h3{margin:0 0 4px;font-size:16px} .tile p{margin:0;color:var(--mut);font-size:12.5px;line-height:1.45}
+.tile .chips{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap} .tile .chips span{font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:2px 8px;color:var(--mut)}
+.tile .count{margin-left:auto;font-size:24px;font-weight:800;color:var(--green2);align-self:center}
+.t-benef{border-color:var(--c-benef)} .t-benef .ic{background:var(--c-benef)} .t-benef .count{color:var(--c-benef)}
+.t-vouch{border-color:var(--c-vouch)} .t-vouch .ic{background:var(--c-vouch)} .t-vouch .count{color:var(--c-vouch)}
+.t-supp{border-color:var(--c-supp)} .t-supp .ic{background:var(--c-supp)} .t-supp .count{color:var(--c-supp)}
+.t-over{border-color:var(--c-over)} .t-over .ic{background:var(--c-over)} .t-over .count{color:var(--c-over)}
+.t-mon{border-color:var(--c-mon)} .t-mon .ic{background:var(--c-mon)} .t-mon .count{color:var(--c-mon)}
+.t-admin{border-color:var(--c-admin)} .t-admin .ic{background:var(--c-admin)} .t-admin .count{color:var(--c-admin)}
+.band{border-radius:12px;padding:16px 20px;color:#fff;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+.band .ic{width:44px;height:44px;border-radius:11px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px}
+.band h2{margin:0;font-size:20px} .band p{margin:2px 0 0;opacity:.9;font-size:12.5px}
+table{width:100%;border-collapse:collapse;font-size:13px} th{text-align:left;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:2px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer} tr.click:hover td{background:#faf8f0}
+.pill{font-size:11px;padding:2px 9px;border-radius:12px;font-weight:600} .pill.ok{background:#e7f3e9;color:#1b7a3d} .pill.warn{background:#fdf2dd;color:#b06a00} .pill.red{background:#fbe9e7;color:#b3261e} .pill.mut{background:#eee;color:#666}
+.pagecards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:900px){.pagecards{grid-template-columns:1fr 1fr}}
+.pc{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff} .pc .t{font-weight:700;font-size:13.5px} .pc .d{color:var(--mut);font-size:11.5px;margin-top:2px}
+.rgrid{display:grid;grid-template-columns:1.3fr 1fr;gap:18px}@media(max-width:900px){.rgrid{grid-template-columns:1fr}}
+.tl{list-style:none;margin:0;padding:0;position:relative} .tl:before{content:"";position:absolute;left:13px;top:4px;bottom:4px;width:2px;background:var(--line)}
+.tl li{position:relative;padding:0 0 16px 40px} .tl li .n{position:absolute;left:4px;top:0;width:20px;height:20px;border-radius:50%;background:var(--green2);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center}
+.tl li.done .n{background:var(--c-benef)} .tl li.pend .n{background:#c9c2b0}
+.tl li b{display:block;font-size:13.5px} .tl li small{color:var(--mut)}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;gap:12px} .kv b{font-weight:600;text-align:right}
+.hash{font-family:Consolas,monospace;font-size:11px;color:var(--mut);word-break:break-all;background:var(--bg);padding:8px;border-radius:6px;border:1px solid var(--line)}
+.btn{background:var(--green2);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;font-size:13px}
+.btn.g{background:var(--gold);color:#3b2f1e}
+.back{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:12.5px;margin-bottom:14px}
+/* login */
+#login{max-width:420px;margin:8vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px;box-shadow:0 10px 40px rgba(0,0,0,.1)}
+#login h2{margin:0 0 4px;font-size:22px} #login p{color:var(--mut);margin:0 0 18px;font-size:13px}
+#login label{font-size:12px;font-weight:600;color:var(--mut);display:block;margin:12px 0 5px}
+#login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:14px}
+#login .btn{width:100%;margin-top:18px;padding:12px}
+.demo{margin-top:16px;font-size:11.5px;color:var(--mut);background:var(--bg);border-radius:9px;padding:10px 12px;line-height:1.7}
+.demo b{color:var(--ink)} .demo a{color:var(--green2);cursor:pointer;font-weight:600}
+#loginErr{display:none;background:#fbe9e7;color:#b3261e;border-radius:8px;padding:9px 12px;margin-top:12px;font-size:13px}
+.badge{display:inline-block;background:#e7f3e9;color:#1b7a3d;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;margin-left:8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22271f;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:99;opacity:0;transition:.25s}
+.toast.show{opacity:1}
+.spin{border:3px solid var(--line);border-top-color:var(--green2);border-radius:50%;width:26px;height:26px;animation:sp 1s linear infinite;margin:40px auto}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="stripe"></div>
+<header>
+  <div class="crest">PSS</div>
+  <div><h1>e-PSS · e-Voucher Module<small>Department of Agriculture — Online Platform for Producer Support</small></h1></div>
+  <div class="spacer"></div>
+  <div class="zbadge" id="zbadge">🔎 4-Zoom · Preview</div>
+  <div class="user" id="userBox" onclick="logout()" title="Sign out"></div>
+</header>
+<div class="crumbs hidden" id="crumbs"></div>
+
+<!-- LOGIN -->
+<div id="login">
+  <h2>Sign in <span class="badge">LIVE DATA</span></h2>
+  <p>This is the 4-Zoom preview — it talks to the same live database as the current system.</p>
+  <label>Username</label><input id="u" value="admin" autocomplete="username">
+  <label>Password</label><input id="pw" type="password" value="admin123" autocomplete="current-password">
+  <button class="btn" onclick="doLogin()">Sign in →</button>
+  <div id="loginErr"></div>
+  <div class="demo">
+    <b>Demo logins</b> (click to fill):<br>
+    <a onclick="fill('admin','admin123')">National — admin</a> ·
+    <a onclick="fill('kzn','kzn123')">Provincial — kzn</a> ·
+    <a onclick="fill('umzinyathi','dist123')">District — umzinyathi</a> ·
+    <a onclick="fill('dealer','dealer123')">Dealer — dealer</a>
+  </div>
+</div>
+
+<div class="wrap hidden" id="app">
+
+<!-- ZOOM 2 : COMMAND CENTRE -->
+<section class="screen" id="command">
+  <h2 class="page">National Command Centre</h2>
+  <p class="sub" id="cmdSub">Producer support across all nine provinces · live database</p>
+  <div class="grid k4" id="kpis"></div>
+  <div class="grid k2" style="margin-top:16px">
+    <div class="card"><div class="sect" style="margin-top:0">Producers by province</div><div id="provBars"></div></div>
+    <div class="card"><div class="sect" style="margin-top:0">🔴 Oversight flags (Zoom 2 → 4)</div><div id="flags"></div></div>
+  </div>
+  <div class="sect">Workspaces — pick a zone (Zoom 3)</div>
+  <div class="grid k3" id="tiles"></div>
+</section>
+
+<!-- ZOOM 3 : WORKSPACE -->
+<section class="screen" id="workspace">
+  <button class="back" onclick="go('command')">← Back to Command Centre</button>
+  <div class="band" id="wsband"><div class="ic" id="wsic"></div><div><h2 id="wsname"></h2><p id="wsdesc"></p></div></div>
+  <div class="pagecards" id="wspages"></div>
+  <div class="card"><div class="sect" style="margin-top:0" id="wstabletitle"></div><table id="wstable"></table></div>
+</section>
+
+<!-- ZOOM 4 : RECORD -->
+<section class="screen" id="record">
+  <button class="back" id="recback">← Back</button>
+  <div id="recbody"></div>
+</section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const STATE={me:null,token:null,cur:'benef'};
+const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[]};
+const PROV={KZN:'KwaZulu-Natal',GP:'Gauteng',LP:'Limpopo',FS:'Free State',MP:'Mpumalanga',EC:'Eastern Cape',WC:'Western Cape',NC:'Northern Cape',NW:'North West'};
+const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json','x-auth-token':STATE.token||''},body:b?JSON.stringify(b):undefined}).then(r=>{if(r.status===401&&url!=='/login'){logout();toast('🔒 Session ended — sign in again');}return r.json();});
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+function fill(u,p){$('u').value=u;$('pw').value=p;}
+
+async function doLogin(){
+  const r=await api('/login','POST',{username:($('u').value||'').trim(),password:($('pw').value||'').trim()});
+  if(r.error){$('loginErr').textContent=r.error;$('loginErr').style.display='block';return;}
+  $('loginErr').style.display='none';STATE.me=r;STATE.token=r.token;
+  $('login').classList.add('hidden');$('app').classList.remove('hidden');$('crumbs').classList.remove('hidden');
+  $('userBox').innerHTML=r.name+'<br><small>'+roleLabel(r.role)+(r.scope&&r.scope!=='All provinces'?' · '+r.scope:'')+'</small>';
+  await loadAll();go('command');
+}
+function logout(){STATE.me=null;STATE.token=null;$('app').classList.add('hidden');$('crumbs').classList.add('hidden');$('login').classList.remove('hidden');}
+function roleLabel(r){return {national:'National Superuser',provincial:'Provincial Officer',district:'District Officer',finance:'Finance',auditor:'Auditor',dealer:'Agro-Dealer'}[r]||r;}
+
+async function loadAll(){
+  $('kpis').innerHTML='<div class="spin"></div>';
+  const [producers,vouchers,dealers,grievances,payments,users,confirmation]=await Promise.all([
+    api('/producers'),api('/vouchers'),api('/dealers'),api('/grievances'),
+    api('/payments'),api('/users').catch(()=>[]),api('/oversight/confirmation').catch(()=>[])
+  ]);
+  DATA.producers=producers||[];DATA.vouchers=vouchers||[];DATA.dealers=dealers||[];
+  DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];
+  renderCommand();
+}
+
+/* ---------- ZOOM 2 ---------- */
+function renderCommand(){
+  const V=DATA.vouchers,P=DATA.producers;
+  const redeemed=V.filter(v=>/redeem|confirm|paid|clos/i.test(v.status)).length;
+  const value=V.filter(v=>/redeem|confirm|paid|clos/i.test(v.status)).reduce((s,v)=>s+(+v.val||0),0);
+  const pct=V.length?Math.round(redeemed/V.length*100):0;
+  $('kpis').innerHTML=[
+    ['g',P.length,'Producers supported'],
+    ['y',V.length,'Vouchers issued'],
+    ['t',pct+'%','Redeemed'],
+    ['b','R '+fmt(value),'Value distributed']
+  ].map(k=>`<div class="card kpi ${k[0]}"><div class="n">${k[1]}</div><div class="l">${k[2]}</div></div>`).join('');
+
+  // province bars
+  const by={};P.forEach(p=>{const k=p.prov||'—';by[k]=(by[k]||0)+1;});
+  const ent=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const max=Math.max(1,...ent.map(e=>e[1]));
+  $('provBars').innerHTML=ent.length?ent.map(([k,n])=>`<div class="bar"><div class="name">${PROV[k]||k}</div><div class="track"><div class="fill" style="width:${Math.round(n/max*100)}%"></div></div><div class="v">${n}</div></div>`).join(''):'<p class="sub">No producers yet.</p>';
+
+  // oversight flags — real
+  const flags=[];
+  (DATA.confirmation||[]).forEach(c=>{const conf=c.confirmed??c.Confirmed??0,red=c.redeemed??c.Redeemed??c.total??0,dealer=c.dealer||c.Dealer||'Dealer';if(red>0&&conf===0)flags.push(['red',`<b>${dealer}</b> — ${red} redeemed, 0 farmer confirmations`,()=>openDealer(dealer)]);});
+  const disputed=DATA.vouchers.filter(v=>/disput/i.test(v.confirm_status||v.status)).length;
+  if(disputed)flags.push(['red',`<b>${disputed}</b> disputed voucher(s) need attention`,()=>ws('vouch')]);
+  const awaiting=DATA.vouchers.filter(v=>/redeem/i.test(v.status)&&!/confirm/i.test(v.confirm_status||'')).length;
+  if(awaiting)flags.push(['warn',`${awaiting} voucher(s) awaiting farmer confirmation`,()=>ws('vouch')]);
+  $('flags').innerHTML=flags.length?flags.map((f,i)=>`<div class="flag" style="${f[0]==='warn'?'background:#fdf6e6;border-color:#f0e0b8':''}" onclick="FLAG[${i}]()"><span class="dot" style="${f[0]==='warn'?'background:var(--c-vouch)':''}"></span> ${f[1]}</div>`).join('')+'<p class="sub" style="margin:10px 0 0">Click a flag to zoom to the record.</p>':'<p class="sub">✓ No oversight flags — all redemptions confirmed.</p>';
+  window.FLAG=flags.map(f=>f[2]);
+
+  // tiles with live counts
+  const counts={benef:P.length,vouch:V.length,supp:DATA.dealers.length,over:DATA.grievances.length,mon:DATA.payments.length,admin:DATA.users.length};
+  $('tiles').innerHTML=Object.entries(WS).map(([k,w])=>`<div class="card tile ${w.cls}" onclick="ws('${k}')"><div class="ic">${w.ic}</div><div><h3>${w.name}</h3><p>${w.desc}</p><div class="chips">${w.pages.slice(0,4).map(p=>'<span>'+p[0]+'</span>').join('')}</div></div><div class="count">${counts[k]}</div></div>`).join('');
+}
+function fmt(n){return (n||0).toLocaleString('en-ZA');}
+function pillFor(status){const s=(status||'').toLowerCase();let c='mut';if(/active|verified|redeem|confirm|paid|resolv|ready|approv|clos/.test(s))c='ok';if(/pend|issu|await|investig|build|wait/.test(s))c='warn';if(/disput|flag|mismatch|escal|lock|reject|fail|suspend/.test(s))c='red';return `<span class="pill ${c}">${status||'—'}</span>`;}
+
+/* ---------- workspace defs ---------- */
+const WS={
+ benef:{ic:'🧑‍🌾',cls:'t-benef',col:'var(--c-benef)',name:'Beneficiaries',desc:"Who gets support — and proving they're real.",
+   pages:[['Producer Register','All producers, scoped by area'],['Applications','Recommend → approve'],['Targeted Distribution','Issue to a group at once'],['ID / RICA / Home Affairs','Identity validation']],
+   cols:['Producer','Province','District','Status','ID / RICA'],
+   row:p=>[p.name,PROV[p.prov]||p.prov,p.dist,pillFor(p.status),pillFor(p.homeAffairs||p.rica)],
+   data:()=>DATA.producers,rec:'producer'},
+ vouch:{ic:'🎟️',cls:'t-vouch',col:'var(--c-vouch)',name:'Vouchers',desc:'Packages, issuance, redemption &amp; confirmation.',
+   pages:[['Subsidy Packages','Bundles of approved inputs'],['Voucher Issuance','Unique no. + OTP'],['Redemptions','OTP redeem at dealer'],['Farmer Confirmation','Confirm / dispute receipt']],
+   cols:['Voucher','Producer','Package','Status','Confirmed'],
+   row:v=>[v.no,v.who,v.pkg,pillFor(v.status),pillFor(v.confirm_status||'—')],
+   data:()=>DATA.vouchers,rec:'voucher'},
+ supp:{ic:'🏪',cls:'t-supp',col:'var(--c-supp)',name:'Suppliers &amp; Payments',desc:'Agro-dealers and paying them fast.',
+   pages:[['Agro-Dealer Directory','Accredited dealers by area'],['Payments','Approve → pay with ref'],['Bank / BAS','Disbursement &amp; reconciliation']],
+   cols:['Dealer','Province','District','Contact','Status'],
+   row:d=>[d.name,PROV[d.prov]||d.prov,d.dist,d.contact||d.phone||'—',pillFor(d.status)],
+   data:()=>DATA.dealers,rec:'dealer'},
+ over:{ic:'🛡️',cls:'t-over',col:'var(--c-over)',name:'Oversight &amp; Integrity',desc:'Confirmation, grievances &amp; audit trail.',
+   pages:[['Confirmation Tracker','Per-dealer confirmed vs disputed'],['Grievances','Log, track &amp; resolve'],['Audit Trail','Tamper-evident hash-chain']],
+   cols:['Ref','Beneficiary','Issue','Status','Opened'],
+   row:g=>[g.ref,g.who,g.issue,pillFor(g.status),g.created],
+   data:()=>DATA.grievances,rec:'grievance'},
+ mon:{ic:'📊',cls:'t-mon',col:'var(--c-mon)',name:'Monitoring &amp; Reports',desc:'Payments, M&amp;E and export.',
+   pages:[['M&amp;E Dashboard','Disaggregated view'],['Payments Ledger','Every disbursement'],['Export','CSV · Excel · PDF']],
+   cols:['Voucher','Supplier','Beneficiary','Amount','Status'],
+   row:p=>[p.voucher_no,p.supplier,p.who,'R '+fmt(p.amount),pillFor(p.status)],
+   data:()=>DATA.payments,rec:'payment'},
+ admin:{ic:'⚙️',cls:'t-admin',col:'var(--c-admin)',name:'Administration',desc:'Users, roles &amp; access.',
+   pages:[['Users &amp; Access','Roles &amp; scoping'],['Communications','SMS advisories &amp; OTP'],['Integrations','Farmer Register, BAS…']],
+   cols:['Name','Role','Scope','Username'],
+   row:u=>[u.name,pillFor(roleLabel(u.role)),u.scope||'—',u.username||'—'],
+   data:()=>DATA.users,rec:'user'},
+};
+
+/* ---------- ZOOM 3 ---------- */
+function ws(key){
+  const w=WS[key];STATE.cur=key;
+  $('wsic').textContent=w.ic;$('wsname').innerHTML=w.name;$('wsdesc').innerHTML=w.desc;
+  const band=$('wsband');band.className='band '+w.cls;band.style.background='linear-gradient(100deg,'+w.col+',rgba(0,0,0,.28))';
+  $('wspages').innerHTML=w.pages.map(p=>`<div class="pc"><div class="t">${p[0]}</div><div class="d">${p[1]}</div></div>`).join('');
+  const rows=w.data();
+  let h='<tr>'+w.cols.map(c=>'<th>'+c+'</th>').join('')+'</tr>';
+  if(!rows.length)h+=`<tr><td colspan="${w.cols.length}" style="color:var(--mut);padding:18px">No records yet.</td></tr>`;
+  rows.forEach((r,i)=>{h+=`<tr class="click" onclick="rec('${key}',${i})">`+w.row(r).map(c=>'<td>'+c+'</td>').join('')+'</tr>';});
+  $('wstable').innerHTML=h;
+  $('wstabletitle').innerHTML=w.name.replace('&amp;','&')+' — click a row to zoom to the record (Zoom 4) · '+rows.length+' record(s)';
+  go('workspace',key);
+}
+
+/* ---------- ZOOM 4 ---------- */
+function rec(key,i){STATE.cur=key;const w=WS[key];const obj=w.data()[i];$('recback').setAttribute('onclick',"ws('"+key+"')");$('recback').innerHTML='← Back to '+w.name.replace('&amp;','&');$('recbody').innerHTML=REC[w.rec](obj);go('record',key,i,recTitle(w.rec,obj));}
+function recTitle(t,o){return {producer:o.name,voucher:'Voucher #'+o.no,dealer:o.name,grievance:o.ref,payment:o.ref||o.voucher_no,user:o.name}[t]||'Record';}
+function bandR(cls,col,ic,title,sub){return `<div class="band ${cls}" style="background:linear-gradient(100deg,${col},rgba(0,0,0,.28))"><div class="ic">${ic}</div><div><h2>${title}</h2><p>${sub}</p></div></div>`;}
+function kv(k,v){return `<div class="kv"><span>${k}</span><b>${v??'—'}</b></div>`;}
+function openDealer(name){const i=DATA.dealers.findIndex(d=>d.name===name);if(i>=0)rec('supp',i);else ws('supp');}
+
+const REC={
+ producer:p=>{const mine=DATA.vouchers.filter(v=>v.who===p.name);
+   return bandR('t-benef','var(--c-benef)','🧑‍🌾',p.name,'Producer profile · identity, entitlements &amp; vouchers')+`
+   <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Identity &amp; verification</div>
+   ${kv('Full name',p.name)}${kv('ID (Home Affairs)',(p.idNo||'—')+' '+(/verif/i.test(p.homeAffairs)?'✓':''))}${kv('Cellphone (RICA)',(p.phone||'—')+' '+(/verif/i.test(p.rica)?'✓':''))}${kv('Province · District',(PROV[p.prov]||p.prov)+' · '+p.dist)}${kv('Status',pillFor(p.status))}${kv('Demographic',p.demo||'—')}</div>
+   <div class="card"><div class="sect" style="margin-top:0">Vouchers (${mine.length})</div>
+   <table><tr><th>Voucher</th><th>Package</th><th>Status</th></tr>${mine.map((v,ix)=>`<tr class="click" onclick="rec('vouch',${DATA.vouchers.indexOf(v)})"><td>${v.no}</td><td>${v.pkg}</td><td>${pillFor(v.status)}</td></tr>`).join('')||'<tr><td colspan=3 style="color:var(--mut)">None yet.</td></tr>'}</table>
+   <div style="margin-top:12px">${kv('Entitlement',p.ent||'—')}</div></div></div>`;},
+ voucher:v=>{const steps=[['Issued','done',(v.pkg||'')+' · R '+fmt(v.val),v.created],['Redeemed at dealer',/redeem|confirm|paid|clos/i.test(v.status)?'done':'pend',v.dealer||'—',v.redeemed_at],['Farmer confirmed',/confirm/i.test(v.confirm_status)?'done':(/disput/i.test(v.confirm_status)?'pend':'pend'),/disput/i.test(v.confirm_status)?'⚠ Disputed':(v.confirm_status||'Awaiting'),v.confirmed_at],['Reconciled &amp; closed',/clos/i.test(v.status)?'done':'pend','Nightly reconciliation','']];
+   return bandR('t-vouch','var(--c-vouch)','🎟️','Voucher #'+v.no,'Full lifecycle · producer, dealer &amp; confirmation')+`
+   <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Voucher lifecycle</div><ul class="tl">
+   ${steps.map((s,ix)=>`<li class="${s[1]}"><span class="n">${ix+1}</span><b>${s[0]}</b><small>${s[2]||''}${s[3]?' · '+s[3]:''}</small></li>`).join('')}</ul></div>
+   <div><div class="card"><div class="sect" style="margin-top:0">Details</div>${kv('Beneficiary',v.who)}${kv('Province',PROV[v.prov]||v.prov)}${kv('Package',v.pkg)}${kv('Value','R '+fmt(v.val))}${kv('OTP',v.otp||'—')}${kv('Confirm code',v.confirm_code||'—')}${kv('Expiry',v.expiry||'—')}${kv('Status',pillFor(v.status))}</div></div></div>`;},
+ dealer:d=>{const paid=DATA.payments.filter(p=>p.supplier===d.name);const owed=paid.filter(p=>!/paid/i.test(p.status)).reduce((s,p)=>s+(+p.amount||0),0);
+   return bandR('t-supp','var(--c-supp)','🏪',d.name,'Agro-dealer profile · accreditation &amp; payments')+`
+   <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Accreditation</div>${kv('Dealer',d.name)}${kv('Status',pillFor(d.status))}${kv('Province · District',(PROV[d.prov]||d.prov)+' · '+(d.dist||'—'))}${kv('Company reg',d.company_reg||'—')}${kv('VAT',d.vat||'—')}${kv('CSD',d.csd||'—')}${kv('Bank',d.bank||'—')}${kv('Contact',(d.contact||d.phone||'—'))}</div>
+   <div class="card"><div class="sect" style="margin-top:0">Payments (${paid.length})</div>${kv('Outstanding','R '+fmt(owed))}<table style="margin-top:8px"><tr><th>Voucher</th><th>Amount</th><th>Status</th></tr>${paid.map(p=>`<tr><td>${p.voucher_no}</td><td>R ${fmt(p.amount)}</td><td>${pillFor(p.status)}</td></tr>`).join('')||'<tr><td colspan=3 style="color:var(--mut)">No payments yet.</td></tr>'}</table></div></div>`;},
+ grievance:g=>bandR('t-over','var(--c-over)','🛡️',g.ref,'Grievance / integrity case')+`
+   <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Case detail</div>${kv('Reference',g.ref)}${kv('Beneficiary',g.who)}${kv('Issue',g.issue)}${kv('Status',pillFor(g.status))}${kv('Opened',g.created)}</div>
+   <div class="card"><div class="sect" style="margin-top:0">Tamper-evident audit</div>${kv('Chain status','<span style="color:#1b7a3d">✓ Verified</span>')}<div style="margin-top:8px" class="hash">sha256(prev | ts | actor | event)<br>every action on this case is hash-chained.</div></div></div>`,
+ payment:p=>bandR('t-mon','var(--c-mon)','📊',p.ref||('Payment '+p.voucher_no),'Disbursement record')+`
+   <div class="card" style="max-width:560px">${kv('Voucher',p.voucher_no)}${kv('Supplier',p.supplier)}${kv('Beneficiary',p.who)}${kv('Amount','R '+fmt(p.amount))}${kv('Gateway',p.gateway||'—')}${kv('Reference',p.ref||'—')}${kv('When',p.ts)}${kv('Status',pillFor(p.status))}</div>`,
+ user:u=>bandR('t-admin','var(--c-admin)','⚙️',u.name,'User &amp; access record')+`
+   <div class="card" style="max-width:560px">${kv('Name',u.name)}${kv('Role',roleLabel(u.role))}${kv('Scope',u.scope||'—')}${kv('Username',u.username||'—')}</div>`,
+};
+
+/* ---------- navigation ---------- */
+function go(id,wskey,i,recname){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  $(id).classList.add('on');
+  const z={command:['2','Command Centre'],workspace:['3','Workspace'],record:['4','The Record']}[id];
+  $('zbadge').textContent='🔎 Zoom '+z[0]+' · '+z[1];
+  let c='<span class="zlbl">You are here</span> <a onclick="go(\'command\')">National</a>';
+  if(id==='workspace'||id==='record')c+=' ▸ <a onclick="ws(\''+(wskey||STATE.cur)+'\')">'+WS[wskey||STATE.cur].name+'</a>';
+  if(id==='record')c+=' ▸ <a>'+(recname||'Record')+'</a>';
+  $('crumbs').innerHTML=c;window.scrollTo(0,0);
+}
+// auto-login convenience for preview left off; user clicks Sign in
+</script>
+</body>
+</html>
