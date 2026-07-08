@@ -31,8 +31,8 @@ header h1{font-size:17px;margin:0;font-weight:700} header small{opacity:.85;font
 .crumbs .zlbl{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:2px 9px;font-size:11px;color:var(--mut)}
 .wrap{max-width:1180px;margin:0 auto;padding:22px}
 .hidden{display:none!important}
-.screen{display:none;animation:fade .25s} .screen.on{display:block}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.screen{display:none;animation:fade .12s} .screen.on{display:block}
+@keyframes fade{from{opacity:.4}to{opacity:1}}
 h2.page{font-size:22px;margin:0 0 3px} p.sub{color:var(--mut);margin:0 0 18px;font-size:13px}
 .grid{display:grid;gap:16px}
 .k4{grid-template-columns:repeat(4,1fr)} .k3{grid-template-columns:repeat(3,1fr)} .k2{grid-template-columns:repeat(2,1fr)}
@@ -218,6 +218,18 @@ const $=id=>document.getElementById(id);
 const STATE={me:null,token:null,cur:'benef'};
 const DATA={producers:[],vouchers:[],dealers:[],grievances:[],payments:[],users:[],confirmation:[],packages:[],applications:[],messages:[],feedback:[]};
 const PROV={KZN:'KwaZulu-Natal',GP:'Gauteng',LP:'Limpopo',FS:'Free State',MP:'Mpumalanga',EC:'Eastern Cape',WC:'Western Cape',NC:'Northern Cape',NW:'North West'};
+const DISTRICTS={
+ KZN:['eThekwini (Metro)','uMgungundlovu','uThukela','uMzinyathi','Amajuba','Zululand','uMkhanyakude','King Cetshwayo','iLembe','Harry Gwala','Ugu'],
+ GP:['City of Johannesburg (Metro)','City of Tshwane (Metro)','Ekurhuleni (Metro)','Sedibeng','West Rand'],
+ LP:['Capricorn','Mopani','Sekhukhune','Vhembe','Waterberg'],
+ FS:['Mangaung (Metro)','Fezile Dabi','Lejweleputswa','Thabo Mofutsanyana','Xhariep'],
+ MP:['Ehlanzeni','Gert Sibande','Nkangala'],
+ EC:['Buffalo City (Metro)','Nelson Mandela Bay (Metro)','Alfred Nzo','Amathole','Chris Hani','Joe Gqabi','OR Tambo','Sarah Baartman'],
+ WC:['City of Cape Town (Metro)','Cape Winelands','Central Karoo','Garden Route','Overberg','West Coast'],
+ NC:['Frances Baard','John Taolo Gaetsewe','Namakwa','Pixley ka Seme','ZF Mgcawu'],
+ NW:['Bojanala Platinum','Dr Kenneth Kaunda','Dr Ruth Segomotsi Mompati','Ngaka Modiri Molema']
+};
+function fillDistricts(provId,distId){var c=$(provId).value;var L=DISTRICTS[c]||[];$(distId).innerHTML=L.map(d=>`<option>${d}</option>`).join('')||'<option value="">—</option>';}
 const api=(url,method,b)=>fetch('/api'+url,{method:method||'GET',headers:{'Content-Type':'application/json','x-auth-token':STATE.token||''},body:b?JSON.stringify(b):undefined}).then(r=>{if(r.status===401&&url!=='/login'){logout();toast('🔒 Session ended — sign in again');}return r.json();});
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
 function fill(u,p){$('u').value=u;$('pw').value=p;}
@@ -248,6 +260,7 @@ async function loadAll(){
   ]);
   DATA.producers=producers||[];DATA.vouchers=vouchers||[];DATA.dealers=dealers||[];
   DATA.grievances=grievances||[];DATA.payments=payments||[];DATA.users=users||[];DATA.confirmation=confirmation||[];DATA.packages=packages||[];DATA.applications=applications||[];DATA.messages=messages||[];DATA.feedback=feedback||[];
+  DATA._catalogue=null;DATA._audit=null;DATA._auditV=null; // drop panel caches so they refresh
   renderCommand();
 }
 
@@ -377,7 +390,8 @@ function openDealer(name){const i=DATA.dealers.findIndex(d=>d.name===name);if(i>
 
 const REC={
  producer:p=>{const mine=DATA.vouchers.filter(v=>v.who===p.name);
-   return bandR('t-benef','var(--c-benef)','🧑‍🌾',p.name,'Producer profile · identity, entitlements &amp; vouchers')+`
+   return bandR('t-benef','var(--c-benef)','🧑‍🌾',p.name,'Producer profile · identity, entitlements &amp; vouchers')+
+   `<div class="recact"><button class="btn" onclick="formEditProducer(${p.id})">✏️ Edit</button><button class="btn danger" onclick="deleteProducer(${p.id},'${(p.name||'').replace(/'/g,'')}')">🗑️ Delete</button></div>`+`
    <div class="rgrid"><div class="card"><div class="sect" style="margin-top:0">Identity &amp; verification</div>
    ${kv('Full name',p.name)}${kv('ID (Home Affairs)',(p.idNo||'—')+' '+(/verif/i.test(p.homeAffairs)?'✓':''))}${kv('Cellphone (RICA)',(p.phone||'—')+' '+(/verif/i.test(p.rica)?'✓':''))}${kv('Province · District',(PROV[p.prov]||p.prov)+' · '+p.dist)}${kv('Status',pillFor(p.status))}${kv('Demographic',p.demo||'—')}</div>
    <div class="card"><div class="sect" style="margin-top:0">Vouchers (${mine.length})</div>
@@ -408,24 +422,46 @@ const REC={
 };
 
 /* ---------- actions (write to the live API) ---------- */
-function openForm(title,bodyHTML,saveLabel,onSave){$('mTitle').textContent=title;$('mBody').innerHTML=bodyHTML;$('mSave').textContent=saveLabel||'Save';$('mSave').onclick=onSave;$('modal').classList.remove('hidden');}
+function openForm(title,bodyHTML,saveLabel,onSave){$('mTitle').textContent=title;$('mBody').innerHTML=bodyHTML;$('mSave').textContent=saveLabel||'Save';$('mSave').className='btn';$('mSave').onclick=onSave;$('modal').classList.remove('hidden');}
+function esc(s){return (s==null?'':(''+s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function parseDemo(d){d=d||'';var out={race:'',gender:'',age:''};d.split(/[·|,]/).map(s=>s.trim()).filter(Boolean).forEach(function(x){if(/^\d+$/.test(x))out.age=x;else if(/^(f|female)$/i.test(x))out.gender='Female';else if(/^(m|male)$/i.test(x))out.gender='Male';else if(/^(african|black)$/i.test(x))out.race='African';else if(/coloured/i.test(x))out.race='Coloured';else if(/indian|asian/i.test(x))out.race='Indian/Asian';else if(/white/i.test(x))out.race='White';else if(/other/i.test(x))out.race='Other';});return out;}
+function composeDemo(r,g,a){var g2=g==='Female'?'F':g==='Male'?'M':g;return [r,g2,a].filter(Boolean).join('·');}
 function closeModal(){$('modal').classList.add('hidden');}
 function provOptions(sel){return Object.entries(PROV).map(([k,v])=>`<option value="${k}"${k===sel?' selected':''}>${v}</option>`).join('');}
 
-function formAddProducer(){
-  openForm('Add producer',
-   `<label>Full name</label><input id="f_name">
-    <label>Province</label><select id="f_prov">${provOptions('KZN')}</select>
-    <label>District</label><input id="f_dist">
-    <label>ID number</label><input id="f_id">
-    <label>Cellphone</label><input id="f_phone">
-    <label>Entitlement (e.g. Maize 2ha)</label><input id="f_ent">`,
-   'Add producer', async()=>{
-     const name=($('f_name').value||'').trim(); if(!name){toast('Name required');return;}
-     const r=await api('/producers','POST',{name,prov:$('f_prov').value,dist:($('f_dist').value||'').trim(),idNo:($('f_id').value||'').trim(),phone:($('f_phone').value||'').trim(),ent:($('f_ent').value||'').trim()});
+function opts(list,sel){return list.map(function(v){return '<option'+(v===sel?' selected':'')+'>'+(v||'—')+'</option>';}).join('');}
+function producerForm(ex){
+  ex=ex||null; var d=parseDemo(ex&&ex.demo);
+  openForm(ex?'Edit producer':'Add producer',
+   '<label>Full name</label><input id="f_name" value="'+(ex?esc(ex.name):'')+'">'
+   +'<label>Province</label><select id="f_prov" onchange="fillDistricts(\'f_prov\',\'f_dist\')">'+provOptions(ex?ex.prov:'KZN')+'</select>'
+   +'<label>District</label><select id="f_dist"></select>'
+   +'<label>ID number</label><input id="f_id" value="'+(ex?esc(ex.idNo):'')+'">'
+   +'<label>Cellphone</label><input id="f_phone" value="'+(ex?esc(ex.phone):'')+'">'
+   +'<label>Race</label><select id="f_race">'+opts(['','African','Coloured','Indian/Asian','White','Other'],d.race)+'</select>'
+   +'<label>Gender</label><select id="f_gender">'+opts(['','Female','Male','Other'],d.gender)+'</select>'
+   +'<label>Age</label><input id="f_age" type="number" value="'+(d.age||'')+'">'
+   +'<label>Entitlement (e.g. Maize 2ha)</label><input id="f_ent" value="'+(ex?esc(ex.ent):'')+'">',
+   ex?'Save changes':'Add producer', async function(){
+     var name=($('f_name').value||'').trim(); if(!name){toast('Name required');return;}
+     var body={name:name,prov:$('f_prov').value,dist:($('f_dist').value||'').trim(),idNo:($('f_id').value||'').trim(),phone:($('f_phone').value||'').trim(),ent:($('f_ent').value||'').trim(),demo:composeDemo($('f_race').value,$('f_gender').value,($('f_age').value||'').trim())};
+     var r=ex?await api('/producers/'+ex.id,'PUT',body):await api('/producers','POST',body);
      if(r&&r.error){toast('❌ '+r.error);return;}
-     closeModal();await loadAll();ws('benef');toast('✅ Producer added: '+name);
+     closeModal();await loadAll();
+     if(ex){var i=DATA.producers.findIndex(function(x){return x.id===ex.id;});if(i>=0)rec('benef',i);else ws('benef');toast('✅ Producer updated');}
+     else{ws('benef');toast('✅ Producer added: '+name);}
    });
+  fillDistricts('f_prov','f_dist');
+  if(ex&&ex.dist){var s=$('f_dist');for(var i=0;i<s.options.length;i++){if(s.options[i].value===ex.dist||s.options[i].text===ex.dist){s.selectedIndex=i;break;}}}
+}
+function formAddProducer(){producerForm(null);}
+function formEditProducer(id){var p=DATA.producers.find(function(x){return x.id===id;});if(p)producerForm(p);}
+function deleteProducer(id,name){
+  openForm('Delete producer?','<p style="color:var(--mut);font-size:13.5px;line-height:1.6">This permanently removes <b>'+esc(name)+'</b> from the register. This cannot be undone.</p>','Delete permanently',async function(){
+    var r=await api('/producers/'+id,'DELETE'); if(r&&r.error){toast('❌ '+r.error);return;}
+    closeModal();await loadAll();ws('benef');toast('🗑️ Producer deleted: '+name);
+  });
+  $('mSave').className='btn danger';
 }
 function formIssueVoucher(){
   if(!DATA.producers.length){toast('Add a producer first');return;}
@@ -532,7 +568,7 @@ async function openVerification(){
 
 /* ---- Voucher-workspace panels ---- */
 function openPackages(){panelHead('Subsidy packages — bundles of approved inputs · '+DATA.packages.length+' package(s)');let h='<tr><th>Package</th><th>Value</th><th>Items</th><th>Status</th></tr>';if(!DATA.packages.length)h+='<tr><td colspan="4" style="color:var(--mut);padding:16px">No packages yet.</td></tr>';DATA.packages.forEach(k=>h+=`<tr><td><b>${k.name}</b></td><td>R ${fmt(k.val)}</td><td>${k.items||'—'}</td><td>${pillFor(k.status)}</td></tr>`);$('wstable').innerHTML=h;}
-async function openCatalogue(){panelHead('Input catalogue — loading…');const cat=await api('/catalogue').catch(()=>[]);panelHead('Input catalogue — approved items &amp; prices · '+cat.length+' item(s)');let h='<tr><th>Item</th><th>Category</th><th>Price</th><th>Status</th></tr>';if(!cat.length)h+='<tr><td colspan="4" style="color:var(--mut);padding:16px">No items yet.</td></tr>';cat.forEach(c=>h+=`<tr><td>${c.n}</td><td>${c.c||'—'}</td><td>R ${fmt(c.p)}</td><td>${pillFor(c.s)}</td></tr>`);$('wstable').innerHTML=h;}
+async function openCatalogue(){if(!DATA._catalogue){panelHead('Input catalogue — loading…');DATA._catalogue=await api('/catalogue').catch(()=>[]);}const cat=DATA._catalogue;panelHead('Input catalogue — approved items &amp; prices · '+cat.length+' item(s)');let h='<tr><th>Item</th><th>Category</th><th>Price</th><th>Status</th></tr>';if(!cat.length)h+='<tr><td colspan="4" style="color:var(--mut);padding:16px">No items yet.</td></tr>';cat.forEach(c=>h+=`<tr><td>${c.n}</td><td>${c.c||'—'}</td><td>R ${fmt(c.p)}</td><td>${pillFor(c.s)}</td></tr>`);$('wstable').innerHTML=h;}
 function openVouchFilter(kind){
   const title=kind==='redeem'?'Redemptions — vouchers redeemed at a dealer':kind==='await'?'Farmer Confirmation — redeemed, awaiting the farmer’s confirmation':'Vouchers by expiry';
   let list=DATA.vouchers;
@@ -547,7 +583,7 @@ function openVouchFilter(kind){
 /* ---- Suppliers / Oversight / Monitoring panels ---- */
 function openPayments(){panelHead('Payments — every supplier disbursement · '+DATA.payments.length);let h='<tr><th>When</th><th>Supplier</th><th>Voucher</th><th>Amount</th><th>Ref</th><th>Status</th></tr>';if(!DATA.payments.length)h+='<tr><td colspan="6" style="color:var(--mut);padding:16px">No payments yet.</td></tr>';DATA.payments.forEach(p=>h+=`<tr><td>${p.ts}</td><td>${p.supplier}</td><td>${p.voucher_no}</td><td>R ${fmt(p.amount)}</td><td>${p.ref||'—'}</td><td>${pillFor(p.status)}</td></tr>`);$('wstable').innerHTML=h;}
 function openConfirmation(){panelHead('Confirmation tracker — per dealer: redeemed vs farmer-confirmed vs disputed');let h='<tr><th>Dealer</th><th>Redeemed</th><th>Confirmed</th><th>Awaiting</th><th>Disputed</th></tr>';const C=DATA.confirmation||[];if(!C.length)h+='<tr><td colspan="5" style="color:var(--mut);padding:16px">No redemptions yet.</td></tr>';C.forEach(c=>h+=`<tr><td><b>${c.dealer}</b></td><td>${c.redeemed}</td><td style="color:#1b7a3d">${c.confirmed}</td><td style="color:#b06a00">${c.awaiting}</td><td style="color:var(--c-over)">${c.disputed}</td></tr>`);$('wstable').innerHTML=h;}
-async function openAudit(){panelHead('Audit trail — loading…');const [a,v]=await Promise.all([api('/audit').catch(()=>[]),api('/audit/verify').catch(()=>({}))]);const ok=v&&(v.ok||v.intact||v.verified);panelHead('Audit trail — tamper-evident hash chain · '+(ok?'<span style="color:#1b7a3d">✓ chain verified</span>':'<span>'+(a.length)+' events</span>'));let h='<tr><th>When</th><th>Actor</th><th>Event</th></tr>';if(!a.length)h+='<tr><td colspan="3" style="color:var(--mut);padding:16px">No audit events.</td></tr>';a.forEach(e=>h+=`<tr><td style="white-space:nowrap">${e.ts}</td><td>${e.actor}</td><td>${e.event}</td></tr>`);$('wstable').innerHTML=h;}
+async function openAudit(){if(!DATA._audit){panelHead('Audit trail — loading…');const r=await Promise.all([api('/audit').catch(()=>[]),api('/audit/verify').catch(()=>({}))]);DATA._audit=r[0];DATA._auditV=r[1];}const a=DATA._audit,v=DATA._auditV;const ok=v&&(v.ok||v.intact||v.verified);panelHead('Audit trail — tamper-evident hash chain · '+(ok?'<span style="color:#1b7a3d">✓ chain verified</span>':'<span>'+(a.length)+' events</span>'));let h='<tr><th>When</th><th>Actor</th><th>Event</th></tr>';if(!a.length)h+='<tr><td colspan="3" style="color:var(--mut);padding:16px">No audit events.</td></tr>';a.forEach(e=>h+=`<tr><td style="white-space:nowrap">${e.ts}</td><td>${e.actor}</td><td>${e.event}</td></tr>`);$('wstable').innerHTML=h;}
 
 function exportCsv(){
   const rows=[['Voucher','Producer','Province','Package','Value','Status','Confirmed','Created','Expiry']];

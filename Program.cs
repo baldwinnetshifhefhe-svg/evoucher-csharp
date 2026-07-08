@@ -244,6 +244,15 @@ app.MapDelete("/api/producers/{id}", (AppDb db, int id) =>
     db.Producers.Remove(p); Log(db, "Admin", $"Beneficiary removed: {p.Name}", "no"); db.SaveChanges();
     return Results.Ok(new { ok = true });
 });
+app.MapPut("/api/producers/{id}", (AppDb db, int id, Producer input) =>
+{
+    var p = db.Producers.Find(id); if (p is null) return Results.NotFound();
+    if (!string.IsNullOrWhiteSpace(input.Name)) p.Name = input.Name;
+    p.Prov = input.Prov ?? p.Prov; p.Dist = input.Dist ?? p.Dist; p.Ent = input.Ent ?? p.Ent;
+    p.Phone = input.Phone ?? p.Phone; p.IdNo = input.IdNo ?? p.IdNo; p.Demo = input.Demo ?? p.Demo;
+    Log(db, "Admin", $"Beneficiary updated: {p.Name}", "info"); db.SaveChanges();
+    return Results.Ok(p);
+});
 app.MapPost("/api/producers/{id}/suspend", (AppDb db, int id) =>
 {
     var p = db.Producers.Find(id); if (p is null) return Results.NotFound();
