@@ -49,7 +49,17 @@ app.Use(async (ctx, next) =>
 });
 
 app.UseDefaultFiles();   // serve wwwroot/index.html at "/"
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    // Always serve the newest HTML / service worker / manifest (no stale cached copies);
+    // icons and other assets may still cache normally.
+    OnPrepareResponse = ctx =>
+    {
+        var name = ctx.File.Name.ToLowerInvariant();
+        if (name.EndsWith(".html") || name == "sw.js" || name == "manifest.json")
+            ctx.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    }
+});
 
 // ---- helpers ----------------------------------------------------------------
 static string FyEnd() { var d = DateTime.Now; int y = d.Month >= 4 ? d.Year + 1 : d.Year; return $"{y}-03-31"; }
