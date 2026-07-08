@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>e-Voucher · 4-Zoom (live)</title>
+<script>
+// Never serve this page from a stale cache: remove any old service worker + caches on load.
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});});}
+if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}
+</script>
 <style>
 :root{
   --green:#1b5e20;--green2:#2e7d32;--gold:#c79a2c;--bg:#f5f3ec;--card:#fff;--ink:#22271f;--mut:#6b7167;--line:#e3e0d4;
