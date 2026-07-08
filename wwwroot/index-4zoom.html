@@ -11,13 +11,13 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
 .stripe{height:6px;background:linear-gradient(90deg,#007a4d 0 33%,#ffb612 33% 66%,#de3831 66% 100%)}
-header{background:linear-gradient(100deg,var(--green),#3c5523);color:#fff;display:flex;align-items:center;gap:14px;padding:12px 22px}
+header{background:var(--hdr,linear-gradient(100deg,var(--green),#3c5523));color:#fff;display:flex;align-items:center;gap:14px;padding:12px 22px}
 .crest{width:44px;height:44px;border-radius:50%;background:var(--gold);color:#3b2f1e;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
 header h1{font-size:17px;margin:0;font-weight:700} header small{opacity:.85;font-weight:400;display:block;font-size:11px}
 .spacer{flex:1}
 .zbadge{background:rgba(255,255,255,.16);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
 .user{font-size:12px;text-align:right;opacity:.95;cursor:pointer}
-.crumbs{background:#fff;border-bottom:1px solid var(--line);padding:9px 22px;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.crumbs{background:var(--card);border-bottom:1px solid var(--line);padding:9px 22px;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .crumbs a{color:var(--green2);font-weight:600;text-decoration:none;cursor:pointer}
 .crumbs .zlbl{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:2px 9px;font-size:11px;color:var(--mut)}
 .wrap{max-width:1180px;margin:0 auto;padding:22px}
@@ -37,7 +37,7 @@ h2.page{font-size:22px;margin:0 0 3px} p.sub{color:var(--mut);margin:0 0 18px;fo
 .bar .name{width:130px} .bar .track{flex:1;height:12px;background:#e9e6da;border-radius:8px;overflow:hidden}
 .bar .fill{height:100%;background:var(--green2);border-radius:8px}
 .bar .v{width:34px;text-align:right;font-weight:700}
-.flag{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #f0d9d6;background:#fbecea;border-radius:9px;margin-bottom:8px;font-size:13px;cursor:pointer}
+.flag{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #f0d9d6;background:#fbecea;border-radius:9px;margin-bottom:8px;font-size:13px;cursor:pointer;color:#3d2a20}
 .flag:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--c-over);flex-shrink:0}
 .tile{cursor:pointer;border-left:6px solid var(--green2);transition:.15s;display:flex;gap:14px;align-items:flex-start}
@@ -116,6 +116,14 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 .ripple{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(80,175,255,.9) 0%,rgba(120,200,255,.55) 42%,rgba(120,200,255,0) 74%);box-shadow:0 0 26px rgba(80,175,255,.7);transform:translate(-50%,-50%) scale(0);animation:rip .8s ease-out forwards;pointer-events:none;z-index:6}
 @keyframes rip{0%{opacity:.95}to{transform:translate(-50%,-50%) scale(1.2);opacity:0}}
 @media(prefers-reduced-motion:reduce){.tile,.pc,.kpi{animation:none}.tile:hover,.pc:hover,.kpi:hover{animation:none;transform:translateY(-3px)}}
+/* ---- theme backgrounds ---- */
+/* 2 · Cropland: faint scattered farm pictures + deep 3D furrows between the cards */
+body[data-ztheme='fields']{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><g font-size='34' opacity='0.06'><text x='28' y='60'>🌾</text><text x='190' y='105'>🚜</text><text x='90' y='175'>🌱</text><text x='240' y='235'>🌽</text><text x='130' y='300'>🍅</text><text x='265' y='60'>☀️</text></g></svg>");background-attachment:fixed}
+body[data-ztheme='fields'] .wrap{background-image:repeating-linear-gradient(90deg,transparent 0 40px,rgba(74,49,20,.09) 40px 41px,rgba(255,255,255,.6) 41px 43px);border-radius:10px}
+/* 3 · Midnight City: skyline silhouette along the bottom */
+body[data-ztheme='midnight']{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='440' height='230'><g fill='white' opacity='0.04'><rect x='20' y='120' width='30' height='110'/><rect x='60' y='90' width='26' height='140'/><rect x='96' y='140' width='24' height='90'/><rect x='130' y='68' width='30' height='162'/><rect x='170' y='110' width='24' height='120'/><rect x='210' y='95' width='28' height='135'/><rect x='250' y='138' width='22' height='92'/><rect x='285' y='78' width='30' height='152'/><rect x='325' y='115' width='26' height='115'/><rect x='362' y='100' width='28' height='130'/><rect x='400' y='128' width='24' height='102'/></g></svg>");background-repeat:repeat-x;background-position:bottom;background-attachment:fixed}
+/* 4 · Savanna Earth: acacia trees + wildlife, warm */
+body[data-ztheme='savanna']{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='320'><g font-size='36' opacity='0.07'><text x='28' y='70'>🌳</text><text x='210' y='120'>🦒</text><text x='95' y='195'>🌾</text><text x='255' y='255'>🌳</text><text x='140' y='300'>🐘</text><text x='285' y='70'>🌅</text></g></svg>");background-attachment:fixed}
 .spin{border:3px solid var(--line);border-top-color:var(--green2);border-radius:50%;width:26px;height:26px;animation:sp 1s linear infinite;margin:40px auto}@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -555,12 +563,18 @@ function formFeedback(){
      closeModal();await loadAll();openFeedback();toast('✅ Thank you for your feedback');
    });
 }
-const ZTHEMES={agri:{'--bg':'#f5f3ec','--card':'#fff','--ink':'#22271f','--line':'#e3e0d4','--mut':'#6b7167'},steel:{'--bg':'#b8c1cb','--card':'#f4f5f6','--ink':'#1f2a1f','--line':'#cdd4da','--mut':'#556070'},sand:{'--bg':'#efe7d6','--card':'#fffdf8','--ink':'#2a2419','--line':'#e2d7bf','--mut':'#7a6f57'}};
-function setZTheme(k){const t=ZTHEMES[k]||ZTHEMES.agri;Object.entries(t).forEach(([a,b])=>document.documentElement.style.setProperty(a,b));try{localStorage.setItem('zTheme',k)}catch(e){}}
+const ZTHEMES={
+ agri:{'--bg':'#f5f3ec','--card':'#ffffff','--ink':'#22271f','--line':'#e3e0d4','--mut':'#6b7167','--hdr':'linear-gradient(100deg,#1b5e20,#3c5523)'},
+ fields:{'--bg':'#f3f1e5','--card':'#ffffff','--ink':'#22271f','--line':'#e0dcc7','--mut':'#6b7167','--hdr':'linear-gradient(100deg,#1b5e20,#3c5523)'},
+ midnight:{'--bg':'#0d1526','--card':'#172137','--ink':'#e8edf8','--line':'#273354','--mut':'#95a2c2','--hdr':'linear-gradient(100deg,#0c1730,#1d2b4d)'},
+ savanna:{'--bg':'#efe3cd','--card':'#fffaf0','--ink':'#3a2e1a','--line':'#e4d3ad','--mut':'#8a7550','--hdr':'linear-gradient(100deg,#9c6b2f,#6b4a1e)'}
+};
+function setZTheme(k){const t=ZTHEMES[k]||ZTHEMES.agri;Object.entries(t).forEach(([a,b])=>document.documentElement.style.setProperty(a,b));document.body.setAttribute('data-ztheme',k);try{localStorage.setItem('zTheme',k)}catch(e){}}
 function openThemes(){
   panelHead('Appearance — pick a theme (saved on this device)');
-  const names={agri:'🌿 Agri (default)',steel:'⚙️ Steel',sand:'🏜️ Sand'};
-  $('wstable').innerHTML='<tr><td style="border:0;padding-top:12px">'+Object.keys(ZTHEMES).map(k=>`<button class="btn sm" style="margin-right:8px" onclick="setZTheme('${k}');toast('Theme: '+${JSON.stringify(names[k])})">${names[k]}</button>`).join('')+'</td></tr>';
+  const names={agri:'🌿 Agri (default)',fields:'🌾 Cropland — furrows &amp; crops',midnight:'🌃 Midnight City',savanna:'🦒 Savanna Earth'};
+  let cur='agri'; try{cur=localStorage.getItem('zTheme')||'agri'}catch(e){}
+  $('wstable').innerHTML='<tr><td style="border:0;padding-top:12px">'+Object.keys(ZTHEMES).map(k=>`<button class="btn sm" style="margin:0 8px 8px 0${k===cur?';outline:3px solid var(--gold)':''}" onclick="setZTheme('${k}');toast('Theme: '+${JSON.stringify(names[k].replace(/&amp;/g,'&'))});openThemes()">${names[k]}</button>`).join('')+'</td></tr>';
 }
 
 /* ---------- navigation ---------- */
