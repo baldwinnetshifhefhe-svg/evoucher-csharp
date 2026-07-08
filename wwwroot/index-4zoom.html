@@ -68,7 +68,9 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 .tl li b{display:block;font-size:13.5px} .tl li small{color:var(--mut)}
 .kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;gap:12px} .kv b{font-weight:600;text-align:right}
 .hash{font-family:Consolas,monospace;font-size:11px;color:var(--mut);word-break:break-all;background:var(--bg);padding:8px;border-radius:6px;border:1px solid var(--line)}
-.btn{background:var(--green2);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;font-size:13px}
+.btn{background:var(--green2);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;font-size:13px;transition:transform .1s ease,box-shadow .1s ease;box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(3px);box-shadow:0 0 0 rgba(0,0,0,.18)}
 .btn.g{background:var(--gold);color:#3b2f1e}
 .back{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:12.5px;margin-bottom:14px}
 /* login */
@@ -273,7 +275,7 @@ const WS={
    row:p=>[p.voucher_no,p.supplier,p.who,'R '+fmt(p.amount),pillFor(p.status)],
    data:()=>DATA.payments,rec:'payment'},
  admin:{ic:'⚙️',cls:'t-admin',col:'var(--c-admin)',name:'Administration',desc:'Users, roles &amp; access.',
-   pages:[['Users &amp; Access','Roles &amp; scoping',"ws('admin')"],['Communications','SMS / email advisories',"openComms()"],['Integrations','Home Affairs, RICA, DSS, BAS…',"openIntegrations()"],['Feedback','What users think',"openFeedback()"],['Appearance','Switch the theme',"openThemes()"]],
+   pages:[['Users &amp; Access','Roles &amp; scoping',"ws('admin')"],['Communications','SMS / email advisories',"openComms()"],['Integrations','Home Affairs, RICA, DSS, BAS…',"openIntegrations()"],['Compliance (ToR)','Bid 5/2/2/1(020) requirements 4.1–4.14',"openCompliance()"],['Feedback','What users think',"openFeedback()"],['Appearance','Switch the theme',"openThemes()"]],
    cols:['Name','Role','Scope','Username'],
    row:u=>[u.name,pillFor(roleLabel(u.role)),u.scope||'—',u.username||'—'],
    data:()=>DATA.users,rec:'user'},
@@ -563,6 +565,50 @@ function go(id,wskey,i,recname){
   if(id==='workspace'||id==='record')c+=' ▸ <a onclick="ws(\''+(wskey||STATE.cur)+'\')">'+WS[wskey||STATE.cur].name+'</a>';
   if(id==='record')c+=' ▸ <a>'+(recname||'Record')+'</a>';
   $('crumbs').innerHTML=c;window.scrollTo(0,0);
+}
+/* ---- ToR compliance matrix (Bid 5/2/2/1(020) 2025/2026) ---- */
+const REQ=[
+ ['sec','Mandated technology — ToR 6.2'],
+ ['6.2.3.1','C# + Microsoft SQL back-end','ok','C# / ASP.NET Core + EF Core, live on Azure SQL Server — exactly the mandated stack'],
+ ['6.2.6','Deploy & test on local + remote server','ok','Runs locally (dotnet run) and live on Azure'],
+ ['6.2.2','Working interface of all capabilities','ok','This full clickable web module (well beyond a dummy interface)'],
+ ['sec','System capabilities — ToR Section 4 (Table 1)'],
+ ['4.1','Role-based access + dedicated portals','ok','National / Provincial / District / Dealer, each scoped; every API call token-gated'],
+ ['4.2','Integration (Farmer Register, DSS, Home Affairs, RICA)','warn','Live "Test" buttons call each connector; external links simulated pending data-sharing agreements'],
+ ['4.3','Beneficiary selection + subsidy approval','warn','Register, criteria targeting, packages, recommend→approve (separation of duties); bank co-contribution = roadmap'],
+ ['4.4','Input catalogue management','ok','Catalogue: add / review / approve items + prices'],
+ ['4.5','Entitlement management','ok','Subsidy packages = entitlements, activated on voucher issue'],
+ ['4.6','Communication — SMS voucher + advisories','warn','Communications module + OTP message; live SMS parked pending DoA sender-ID authorisation'],
+ ['4.7','Supplier / agro-dealer portal','warn','Dealer register / accredit + redemptions; invoice workflow = roadmap'],
+ ['4.8','Payments + bank / BAS integration','warn','Supplier paid on redemption + gateway ref; BAS/gateway simulated; full bank = SITA/Treasury onboarding'],
+ ['4.9','Redemption online + offline + OTP','warn','Online OTP end-to-end (issue→redeem→pay); offline redemption = roadmap'],
+ ['4.10','Audit + proof of redemption','ok','Tamper-evident hash-chained audit + farmer confirmation of receipt'],
+ ['4.11','Monitoring & Evaluation + disaggregation','warn','Dashboards + province/district/gender/age; disability/veterans fields = roadmap'],
+ ['4.12','Grievance redressal','ok','Grievances log / track / resolve; a dispute auto-opens a case'],
+ ['4.13','Reporting / BI + export (CSV/Excel/PDF)','warn','Dashboards + CSV export; advanced ad-hoc BI = roadmap'],
+ ['4.14','RICA verification + name match','warn','Live Verification tool checks ID (Home Affairs) + phone (RICA), flags mismatches; simulated pending RICA access'],
+ ['sec','Addendum No.1 — Addendum B (13.1–13.5)'],
+ ['13.1','Audit trail + proof of redemption','ok','Hash-chained audit + farmer confirmation'],
+ ['13.3','Grievance redress + transaction tracing','ok','Grievances + audit chain'],
+ ['13.2 / 13.4 / 13.5','M&E · BI export · RICA','warn','Built; full disaggregation, advanced BI and live RICA = roadmap/simulated']
+];
+function openCompliance(){
+  const items=REQ.filter(r=>r[0]!=='sec');
+  const ok=items.filter(r=>r[2]==='ok').length, warn=items.filter(r=>r[2]==='warn').length, road=items.filter(r=>r[2]==='road').length;
+  panelHead('Compliance — Bid 5/2/2/1(020) 2025/2026 · <span style="color:#1b7a3d">'+ok+' built &amp; live</span> · <span style="color:#b06a00">'+warn+' demonstrated</span>'+(road?' · '+road+' roadmap':'')+' &nbsp; <button class="btn sm" onclick="exportCompliance()">Export CSV</button>');
+  const pill=s=>s==='ok'?'<span class="pill ok">✓ Built &amp; live</span>':s==='warn'?'<span class="pill warn">◐ Demonstrated</span>':'<span class="pill mut">○ Roadmap</span>';
+  let h='<tr><th>Clause</th><th>Requirement</th><th>Status</th><th>How the live system meets it</th></tr>';
+  REQ.forEach(r=>{
+    if(r[0]==='sec'){h+=`<tr><td colspan="4" style="background:var(--bg);font-weight:700;color:var(--ink);padding:10px">${r[1]}</td></tr>`;return;}
+    h+=`<tr><td style="white-space:nowrap;font-weight:600">${r[0]}</td><td>${r[1]}</td><td style="white-space:nowrap">${pill(r[2])}</td><td style="color:var(--mut);font-size:12px">${r[3]}</td></tr>`;
+  });
+  $('wstable').innerHTML=h;
+}
+function exportCompliance(){
+  const rows=[['Clause','Requirement','Status','Detail']];
+  REQ.filter(r=>r[0]!=='sec').forEach(r=>rows.push([r[0],r[1],r[2]==='ok'?'Built & live':r[2]==='warn'?'Demonstrated':'Roadmap',r[3]]));
+  const csv=rows.map(r=>r.map(x=>`"${(x==null?'':x).toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='eVoucher-ToR-compliance.csv';a.click();toast('✅ Compliance matrix exported');
 }
 try{setZTheme(localStorage.getItem('zTheme')||'agri')}catch(e){}
 /* water-drop ripple from the click point on any floating card */
