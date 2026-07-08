@@ -55,6 +55,13 @@ h2.page{font-size:22px;margin:0 0 3px} p.sub{color:var(--mut);margin:0 0 18px;fo
 .tile h3{margin:0 0 4px;font-size:16px} .tile p{margin:0;color:var(--mut);font-size:12.5px;line-height:1.45}
 .tile .chips{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap} .tile .chips span{font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:2px 8px;color:var(--mut)}
 .tile .count{margin-left:auto;font-size:24px;font-weight:800;color:var(--green2);align-self:center}
+.tile .owner{margin-top:8px;font-size:11px;font-weight:700;color:var(--green2);display:flex;align-items:center;gap:5px}
+.tile.locked{opacity:.62;filter:grayscale(.55);cursor:not-allowed;animation:none}
+.tile.locked:hover{animation:none;transform:none;box-shadow:0 6px 16px rgba(30,50,20,.08)}
+.tile.locked::before{display:none}
+.tile.locked .owner{color:var(--c-over)}
+.spherebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--mut);margin:6px 0 12px}
+.spherebar b{color:var(--ink)}
 .t-benef{border-color:var(--c-benef)} .t-benef .ic{background:var(--c-benef)} .t-benef .count{color:var(--c-benef)}
 .t-vouch{border-color:var(--c-vouch)} .t-vouch .ic{background:var(--c-vouch)} .t-vouch .count{color:var(--c-vouch)}
 .t-supp{border-color:var(--c-supp)} .t-supp .ic{background:var(--c-supp)} .t-supp .count{color:var(--c-supp)}
@@ -127,8 +134,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line)} tr.click{cursor:pointer
 @media(prefers-reduced-motion:reduce){.tile,.pc,.kpi{animation:none}.tile:hover,.pc:hover,.kpi:hover{animation:none;transform:translateY(-3px)}}
 /* ---- theme backgrounds ---- */
 /* 2 · Cropland: faint scattered farm pictures + deep 3D furrows between the cards */
-body[data-ztheme='fields']{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><g font-size='34' opacity='0.06'><text x='28' y='60'>🌾</text><text x='190' y='105'>🚜</text><text x='90' y='175'>🌱</text><text x='240' y='235'>🌽</text><text x='130' y='300'>🍅</text><text x='265' y='60'>☀️</text></g></svg>");background-attachment:fixed}
-body[data-ztheme='fields'] .wrap{background-image:repeating-linear-gradient(90deg,transparent 0 40px,rgba(74,49,20,.09) 40px 41px,rgba(255,255,255,.6) 41px 43px);border-radius:10px}
+body[data-ztheme='fields']{background-image:repeating-linear-gradient(90deg,transparent 0 46px,rgba(74,49,20,.11) 46px 47px,rgba(255,255,255,.7) 47px 49px),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><g font-size='34' opacity='0.06'><text x='28' y='60'>🌾</text><text x='190' y='105'>🚜</text><text x='90' y='175'>🌱</text><text x='240' y='235'>🌽</text><text x='130' y='300'>🍅</text><text x='265' y='60'>☀️</text></g></svg>");background-attachment:fixed}
 /* 3 · Midnight City: skyline silhouette along the bottom */
 body[data-ztheme='midnight']{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='440' height='230'><g fill='white' opacity='0.04'><rect x='20' y='120' width='30' height='110'/><rect x='60' y='90' width='26' height='140'/><rect x='96' y='140' width='24' height='90'/><rect x='130' y='68' width='30' height='162'/><rect x='170' y='110' width='24' height='120'/><rect x='210' y='95' width='28' height='135'/><rect x='250' y='138' width='22' height='92'/><rect x='285' y='78' width='30' height='152'/><rect x='325' y='115' width='26' height='115'/><rect x='362' y='100' width='28' height='130'/><rect x='400' y='128' width='24' height='102'/></g></svg>");background-repeat:repeat-x;background-position:bottom;background-attachment:fixed}
 /* 4 · Savanna Earth: acacia trees + wildlife, warm */
@@ -184,6 +190,7 @@ body[data-ztheme='savanna']{background-image:url("data:image/svg+xml;utf8,<svg x
     <div class="card"><div class="sect" style="margin-top:0">🔴 Oversight flags (Zoom 2 → 4)</div><div id="flags"></div></div>
   </div>
   <div class="sect">Workspaces — pick a zone (Zoom 3)</div>
+  <div class="spherebar" id="spherebar"></div>
   <div class="grid k3" id="tiles"></div>
 </section>
 
@@ -244,6 +251,29 @@ async function loadAll(){
   renderCommand();
 }
 
+/* ---------- workspace ownership across the 3 spheres of government ---------- */
+const OWNER={
+ benef:{icon:'🏠',sphere:'District (local)',who:'District Officer'},
+ vouch:{icon:'🏢',sphere:'Provincial',who:'Provincial Officer'},
+ mon:{icon:'🏢',sphere:'Provincial',who:'Provincial · M&E'},
+ supp:{icon:'🏛️',sphere:'National',who:'National · Finance'},
+ over:{icon:'🏛️',sphere:'National',who:'National · Oversight'},
+ admin:{icon:'🏛️',sphere:'National',who:'National Superuser'}
+};
+// which zones each role may open (National superuser oversees all three spheres)
+const ACCESS={
+ national:['benef','vouch','supp','over','mon','admin'],
+ provincial:['vouch','mon'],
+ district:['benef'],
+ dealer:['vouch','supp'],
+ finance:['supp','mon'],
+ auditor:['over','mon']
+};
+function myRole(){return (STATE.me&&STATE.me.role)||'national';}
+function canAccess(k){return (ACCESS[myRole()]||ACCESS.national).includes(k);}
+function mySphere(){return {national:'🏛️ National',provincial:'🏢 Provincial',district:'🏠 District',dealer:'🏪 Agro-Dealer',finance:'🏦 Finance',auditor:'🔍 Oversight'}[myRole()]||myRole();}
+function lockedMsg(k){toast('🔒 This zone belongs to the '+OWNER[k].who+' ('+OWNER[k].sphere+' sphere)');}
+
 /* ---------- ZOOM 2 ---------- */
 function renderCommand(){
   const V=DATA.vouchers,P=DATA.producers;
@@ -275,7 +305,13 @@ function renderCommand(){
 
   // tiles with live counts
   const counts={benef:P.length,vouch:V.length,supp:DATA.dealers.length,over:DATA.grievances.length,mon:DATA.payments.length,admin:DATA.users.length};
-  $('tiles').innerHTML=Object.entries(WS).map(([k,w])=>`<div class="card tile ${w.cls}" onclick="ws('${k}')"><div class="ic">${w.ic}</div><div><h3>${w.name}</h3><p>${w.desc}</p><div class="chips">${w.pages.slice(0,4).map(p=>'<span>'+p[0]+'</span>').join('')}</div></div><div class="count">${counts[k]}</div></div>`).join('');
+  $('spherebar').innerHTML='Work is split across the three spheres of government — 🏛️ <b>National</b> · 🏢 <b>Provincial</b> · 🏠 <b>District</b>. You are signed in as '+mySphere()+' — your zones are active; zones owned by other officials are locked.';
+  $('tiles').innerHTML=Object.entries(WS).map(([k,w])=>{
+    const o=OWNER[k],ok=canAccess(k);
+    const owner=ok?`<div class="owner">${o.icon} your zone · ${o.sphere}</div>`:`<div class="owner">🔒 ${o.who}</div>`;
+    const count=ok?counts[k]:`<span style="opacity:.5;font-size:20px">${o.icon}</span>`;
+    return `<div class="card tile ${w.cls}${ok?'':' locked'}" onclick="${ok?`ws('${k}')`:`lockedMsg('${k}')`}"><div class="ic">${w.ic}</div><div><h3>${w.name}</h3><p>${w.desc}</p><div class="chips">${w.pages.slice(0,3).map(p=>'<span>'+p[0]+'</span>').join('')}</div>${owner}</div><div class="count">${count}</div></div>`;
+  }).join('');
 }
 function fmt(n){return (n||0).toLocaleString('en-ZA');}
 function pillFor(status){const s=(status||'').toLowerCase();let c='mut';if(/active|verified|redeem|confirm|paid|resolv|ready|approv|clos/.test(s))c='ok';if(/pend|issu|await|investig|build|wait/.test(s))c='warn';if(/disput|flag|mismatch|escal|lock|reject|fail|suspend/.test(s))c='red';return `<span class="pill ${c}">${status||'—'}</span>`;}
@@ -316,6 +352,7 @@ const WS={
 
 /* ---------- ZOOM 3 ---------- */
 function ws(key){
+  if(!canAccess(key)){lockedMsg(key);return;}
   const w=WS[key];STATE.cur=key;
   $('wsic').textContent=w.ic;$('wsname').innerHTML=w.name;$('wsdesc').innerHTML=w.desc;
   const band=$('wsband');band.className='band '+w.cls;band.style.background='linear-gradient(100deg,'+w.col+',rgba(0,0,0,.28))';
