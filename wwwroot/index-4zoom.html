@@ -16,7 +16,11 @@ header{background:var(--hdr,linear-gradient(100deg,var(--green),#3c5523));color:
 header h1{font-size:17px;margin:0;font-weight:700} header small{opacity:.85;font-weight:400;display:block;font-size:11px}
 .spacer{flex:1}
 .zbadge{background:rgba(255,255,255,.16);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
-.user{font-size:12px;text-align:right;opacity:.95;cursor:pointer}
+.user{font-size:12px;text-align:right;opacity:.95}
+.hdrsel{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:8px;padding:6px 8px;font-size:12px;font-weight:600;cursor:pointer}
+.hdrsel option{color:#22271f}
+.hdrbtn{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;transition:background .12s}
+.hdrbtn:hover{background:rgba(255,255,255,.3)}
 .crumbs{background:var(--card);border-bottom:1px solid var(--line);padding:9px 22px;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .crumbs a{color:var(--green2);font-weight:600;text-decoration:none;cursor:pointer}
 .crumbs .zlbl{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:2px 9px;font-size:11px;color:var(--mut)}
@@ -133,8 +137,15 @@ body[data-ztheme='savanna']{background-image:url("data:image/svg+xml;utf8,<svg x
   <div class="crest">PSS</div>
   <div><h1>e-PSS · e-Voucher Module<small>Department of Agriculture — Online Platform for Producer Support</small></h1></div>
   <div class="spacer"></div>
+  <select id="themeSel" class="hdrsel" onchange="setZTheme(this.value)" title="Change theme">
+    <option value="agri">🌿 Agri</option>
+    <option value="fields">🌾 Cropland</option>
+    <option value="midnight">🌃 Midnight City</option>
+    <option value="savanna">🦒 Savanna Earth</option>
+  </select>
   <div class="zbadge" id="zbadge">🔎 4-Zoom · Preview</div>
-  <div class="user" id="userBox" onclick="logout()" title="Sign out"></div>
+  <div class="user" id="userBox"></div>
+  <button id="logoutBtn" class="hdrbtn hidden" onclick="logout()">Sign out ⎋</button>
 </header>
 <div class="crumbs hidden" id="crumbs"></div>
 
@@ -210,9 +221,10 @@ async function doLogin(){
   $('loginErr').style.display='none';STATE.me=r;STATE.token=r.token;
   $('login').classList.add('hidden');$('app').classList.remove('hidden');$('crumbs').classList.remove('hidden');
   $('userBox').innerHTML=r.name+'<br><small>'+roleLabel(r.role)+(r.scope&&r.scope!=='All provinces'?' · '+r.scope:'')+'</small>';
+  $('logoutBtn').classList.remove('hidden');
   await loadAll();go('command');
 }
-function logout(){STATE.me=null;STATE.token=null;$('app').classList.add('hidden');$('crumbs').classList.add('hidden');$('login').classList.remove('hidden');}
+function logout(){STATE.me=null;STATE.token=null;$('app').classList.add('hidden');$('crumbs').classList.add('hidden');$('login').classList.remove('hidden');$('logoutBtn').classList.add('hidden');$('userBox').innerHTML='';}
 function roleLabel(r){return {national:'National Superuser',provincial:'Provincial Officer',district:'District Officer',finance:'Finance',auditor:'Auditor',dealer:'Agro-Dealer'}[r]||r;}
 
 async function loadAll(){
@@ -569,7 +581,7 @@ const ZTHEMES={
  midnight:{'--bg':'#0d1526','--card':'#172137','--ink':'#e8edf8','--line':'#273354','--mut':'#95a2c2','--hdr':'linear-gradient(100deg,#0c1730,#1d2b4d)'},
  savanna:{'--bg':'#efe3cd','--card':'#fffaf0','--ink':'#3a2e1a','--line':'#e4d3ad','--mut':'#8a7550','--hdr':'linear-gradient(100deg,#9c6b2f,#6b4a1e)'}
 };
-function setZTheme(k){const t=ZTHEMES[k]||ZTHEMES.agri;Object.entries(t).forEach(([a,b])=>document.documentElement.style.setProperty(a,b));document.body.setAttribute('data-ztheme',k);try{localStorage.setItem('zTheme',k)}catch(e){}}
+function setZTheme(k){const t=ZTHEMES[k]||ZTHEMES.agri;Object.entries(t).forEach(([a,b])=>document.documentElement.style.setProperty(a,b));document.body.setAttribute('data-ztheme',k);var s=$('themeSel');if(s)s.value=k;try{localStorage.setItem('zTheme',k)}catch(e){}}
 function openThemes(){
   panelHead('Appearance — pick a theme (saved on this device)');
   const names={agri:'🌿 Agri (default)',fields:'🌾 Cropland — furrows &amp; crops',midnight:'🌃 Midnight City',savanna:'🦒 Savanna Earth'};
