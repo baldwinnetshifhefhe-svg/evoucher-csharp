@@ -273,17 +273,17 @@ const WS={
    row:d=>[d.name,PROV[d.prov]||d.prov,d.dist,d.contact||d.phone||'—',pillFor(d.status)],
    data:()=>DATA.dealers,rec:'dealer'},
  over:{ic:'🛡️',cls:'t-over',col:'var(--c-over)',name:'Oversight &amp; Integrity',desc:'Confirmation, grievances &amp; audit trail.',
-   pages:[['Confirmation Tracker','Per-dealer confirmed vs disputed',"openConfirmation()"],['Grievances','Log, track &amp; resolve',"ws('over')"],['Audit Trail','Tamper-evident hash-chain',"openAudit()"]],
+   pages:[['Confirmation Tracker','Per-dealer confirmed vs disputed',"openConfirmation()"],['Grievances','Log, track &amp; resolve',"ws('over')"],['Audit Trail','Tamper-evident hash-chain',"openAudit()"],['Anti-Corruption Controls','How fraud is designed out',"openControls()"]],
    cols:['Ref','Beneficiary','Issue','Status','Opened'],
    row:g=>[g.ref,g.who,g.issue,pillFor(g.status),g.created],
    data:()=>DATA.grievances,rec:'grievance'},
  mon:{ic:'📊',cls:'t-mon',col:'var(--c-mon)',name:'Monitoring &amp; Reports',desc:'Payments, M&amp;E and export.',
-   pages:[['M&amp;E Dashboard','Disaggregated view',"go('command')"],['Payments Ledger','Every disbursement',"openPayments()"],['Export','Download vouchers as CSV',"exportCsv()"]],
+   pages:[['M&amp;E Dashboard','Disaggregated view',"go('command')"],['Payments Ledger','Every disbursement',"openPayments()"],['Reports &amp; Export','Standard reports + CSV',"openReports()"]],
    cols:['Voucher','Supplier','Beneficiary','Amount','Status'],
    row:p=>[p.voucher_no,p.supplier,p.who,'R '+fmt(p.amount),pillFor(p.status)],
    data:()=>DATA.payments,rec:'payment'},
  admin:{ic:'⚙️',cls:'t-admin',col:'var(--c-admin)',name:'Administration',desc:'Users, roles &amp; access.',
-   pages:[['Users &amp; Access','Roles &amp; scoping',"ws('admin')"],['Communications','SMS / email advisories',"openComms()"],['Integrations','Home Affairs, RICA, DSS, BAS…',"openIntegrations()"],['Compliance (ToR)','Bid 5/2/2/1(020) requirements 4.1–4.14',"openCompliance()"],['Feedback','What users think',"openFeedback()"],['Appearance','Switch the theme',"openThemes()"]],
+   pages:[['Users &amp; Access','Roles &amp; scoping',"ws('admin')"],['Communications','SMS / email advisories',"openComms()"],['Integrations','Home Affairs, RICA, DSS, BAS…',"openIntegrations()"],['Compliance (ToR)','Bid 5/2/2/1(020) requirements 4.1–4.14',"openCompliance()"],['Feedback','What users think',"openFeedback()"],['Help &amp; About','Links, FAQs, accessibility',"openHelp()"],['Appearance','Switch the theme',"openThemes()"]],
    cols:['Name','Role','Scope','Username'],
    row:u=>[u.name,pillFor(roleLabel(u.role)),u.scope||'—',u.username||'—'],
    data:()=>DATA.users,rec:'user'},
@@ -617,6 +617,63 @@ function exportCompliance(){
   REQ.filter(r=>r[0]!=='sec').forEach(r=>rows.push([r[0],r[1],r[2]==='ok'?'Built & live':r[2]==='warn'?'Demonstrated':'Roadmap',r[3]]));
   const csv=rows.map(r=>r.map(x=>`"${(x==null?'':x).toString().replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='eVoucher-ToR-compliance.csv';a.click();toast('✅ Compliance matrix exported');
+}
+/* ---- Anti-Corruption Controls (Oversight) ---- */
+function openControls(){
+  panelHead('Anti-Corruption Controls — how the system blocks corruption &amp; protects public funds');
+  const rows=[
+   ['Fake / ghost beneficiaries','RICA name check + Farmer Register match; application and approval done by different roles'],
+   ['Official approves their own people','Role-based approval (district recommends, province/national approves); every action audit-logged'],
+   ['Double-dipping (many vouchers, one farmer)','System blocks a second active voucher for the same beneficiary + package'],
+   ['Diversion / cash-out','Commodity voucher (no cash); redemption limited to approved inputs; OTP proves the real farmer collected'],
+   ['Collusion with suppliers','Suppliers must be accredited; payment only for verified redemptions'],
+   ['Paying for goods not delivered','Proof-of-redemption (OTP) required before payment; payment auto-generated from redemption'],
+   ['Tampering with records','Immutable, time-stamped audit trail of every action'],
+   ['Spending past the budget year','Voucher expiry = financial-year end; expired vouchers cannot be redeemed']
+  ];
+  let h='<tr><th>Risk</th><th>Control in this system</th></tr>';
+  rows.forEach(r=>h+=`<tr><td style="font-weight:600">${r[0]}</td><td style="color:var(--mut)">${r[1]}</td></tr>`);
+  h+='<tr><td colspan="2" style="background:var(--bg);padding:12px"><b>Core protection:</b> every Rand paid traces to a redeemed voucher → an approved, RICA-verified beneficiary.</td></tr>';
+  $('wstable').innerHTML=h;
+}
+/* ---- Reports & Export centre (Monitoring) ---- */
+function openReports(){
+  panelHead('Reports &amp; Export Centre — download the real saved data (ToR 4.13)');
+  const reps=[['Vouchers — issued vs redeemed','exportCsv()'],['Beneficiary list','exportProducersCsv()'],['Payments ledger','exportPaymentsCsv()'],['Compliance (ToR) matrix','exportCompliance()']];
+  let h='<tr><th>Report</th><th>Download</th></tr>';
+  reps.forEach(r=>h+=`<tr><td>📄 ${r[0]}</td><td><button class="btn sm" onclick="${r[1]}">CSV</button></td></tr>`);
+  h+='<tr><td colspan="2" style="color:var(--mut);padding:12px">Excel/PDF-formatted versions are generated from this same live data — full multi-format reporting is on the delivery roadmap (ToR 4.13).</td></tr>';
+  $('wstable').innerHTML=h;
+}
+function csvDownload(name,rows){const csv=rows.map(r=>r.map(x=>`"${(x==null?'':x).toString().replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;a.click();toast('✅ '+name+' downloaded');}
+function exportProducersCsv(){const rows=[['Name','Province','District','ID','Phone','Status','Entitlement']];DATA.producers.forEach(p=>rows.push([p.name,PROV[p.prov]||p.prov,p.dist,p.idNo,p.phone,p.status,p.ent]));csvDownload('evoucher-beneficiaries.csv',rows);}
+function exportPaymentsCsv(){const rows=[['When','Supplier','Voucher','Beneficiary','Amount','Ref','Status']];DATA.payments.forEach(p=>rows.push([p.ts,p.supplier,p.voucher_no,p.who,p.amount,p.ref,p.status]));csvDownload('evoucher-payments.csv',rows);}
+/* ---- Help & About (System Links + FAQs + Accessibility + About), grouped ---- */
+function openHelp(){
+  panelHead('Help &amp; About — how the system works, links, FAQs &amp; accessibility');
+  const faqs=[
+   ['Is the voucher money?','No — it is a commodity voucher: a fixed package of inputs (goods), never cash.'],
+   ['How long is a voucher valid?','Until the end of the financial year (31 March); it cannot carry into the next budget year.'],
+   ['How does a farmer get support?','They apply → RICA-checked → district recommends → province/national approves → voucher issued by SMS.'],
+   ['How is a voucher redeemed?','At an accredited agro-dealer, confirmed with a one-time PIN (OTP); works online or offline.'],
+   ['Who gets paid, and when?','The supplier (not the farmer) — payment is raised immediately when the voucher is redeemed.'],
+   ['How does it fight corruption?','Commodity vouchers, RICA checks, separation of duties, one active voucher per farmer per package, OTP proof, full audit trail.']
+  ];
+  const links=[['SMS gateway','ok'],['Payment gateway','ok'],['Extension Directory','warn'],['Farmer Register','warn'],['Decision Support System','warn'],['Banks / financial inst.','red'],['RICA verification','red'],['BAS mainframe','red']];
+  const html=`
+   <div style="padding:6px 2px 4px">
+     <h3 style="margin:6px 0 8px">About this system</h3>
+     <p style="color:var(--mut);font-size:13px;margin:0 0 6px"><b>Real:</b> data saved in a real Microsoft SQL database; National/Provincial/District access levels; targeted distribution &amp; communications; real CSV exports; OTP redemption; hash-chained audit + farmer confirmation.</p>
+     <p style="color:var(--mut);font-size:13px;margin:0 0 14px"><b>Simulated (external authorisation pending):</b> live SMS send (DoA sender-ID), live bank/BAS payment rail (SITA/Treasury), live RICA/Home Affairs feed.</p>
+     <h3 style="margin:14px 0 8px">System links — 8 external connections</h3>
+     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px">${links.map(l=>`<span class="pill ${l[1]}">${l[1]==='ok'?'🟢':l[1]==='warn'?'🟡':'🔴'} ${l[0]}</span>`).join('')}</div>
+     <p style="color:var(--mut);font-size:12px;margin:0 0 14px">🟢 easy · 🟡 needs DoA access · 🔴 needs outside permission (bank/RICA/BAS)</p>
+     <h3 style="margin:14px 0 8px">FAQs</h3>
+     ${faqs.map(q=>`<div style="margin-bottom:10px"><div style="font-weight:600;font-size:13px">${q[0]}</div><div style="color:var(--mut);font-size:12.5px">${q[1]}</div></div>`).join('')}
+     <h3 style="margin:14px 0 8px">Accessibility</h3>
+     <p style="color:var(--mut);font-size:13px;margin:0">Aims for WCAG 2.1 AA: keyboard navigation with visible focus, meaningful labels &amp; headings, readable on zoom, contrast-checked themes. Report issues to <b>epss-support@dalrrd.gov.za</b>.</p>
+   </div>`;
+  $('wstable').innerHTML=`<tr><td colspan="6" style="padding:6px 14px">${html}</td></tr>`;
 }
 try{setZTheme(localStorage.getItem('zTheme')||'agri')}catch(e){}
 /* water-drop ripple from the click point on any floating card */
